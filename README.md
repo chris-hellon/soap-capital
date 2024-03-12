@@ -8,6 +8,7 @@ Soap Capital is a Blazor .NET 8 web application designed to provide cryptocurren
 - **Free Package**: Basic features available to all users without any payment requirement.
 - **Premium Content**: Access to advanced features and premium resources via a payment wall.
 - **Payment Integration**: Support for payment processing using both traditional methods (Stripe) and Bitcoin (Opennode).
+- **Content Management System**: Allows the website owner to upload content, send emails and notifications.
 - **Clean Architecture**: Modular and maintainable codebase following clean architecture principles.
 - **CQRS with Mediator Pattern**: Efficient command and query separation for improved scalability and maintainability.
 - **Dapper for Data Access**: Lightweight and high-performance ORM for interacting with the database.
