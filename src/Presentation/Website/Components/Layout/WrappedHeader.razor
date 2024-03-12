@@ -1,0 +1,22 @@
+<MudAppBar Elevation="25" Fixed="true" Class="@(NavbarService.IsTransparent ? "transparent-app-bar" : "no-transparency")">
+    <div class="d-flex align-center flex-grow-1 d-md-none">
+
+    </div>
+    <div class="d-none d-md-flex align-center flex-grow-1">
+        <MudButton Href="/" Class="navbarBrand">
+            <MudImage Height="50" Src="https://paperstreetsoap.azureedge.net/site/logo.png"></MudImage>
+        </MudButton>
+        <MudTooltip Text="Toggle Dark Mode">
+            <MudToggleIconButton Class="me-2 dark-mode-toggle" Toggled="@IsDarkMode" ToggledChanged="ToggleDarkMode"
+                                 Icon="@Icons.Material.Filled.DarkMode" Color="Color.Dark" Title="Off"
+                                 ToggledIcon="@Icons.Material.Filled.LightMode" ToggledColor="@Color.Tertiary" ToggledTitle="On"/>
+        </MudTooltip>
+        <NavMenu IsDarkMode="IsDarkMode" />
+    </div>
+</MudAppBar>
+
+@code {
+    [Parameter] public EventCallback<bool> ToggleDarkMode { get; set; }
+    
+    [Parameter] public bool IsDarkMode { get; set; }
+}

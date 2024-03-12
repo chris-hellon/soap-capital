@@ -1,0 +1,22 @@
+@inject IUsersService UsersService
+
+@page "/unsubscribe/{UserId}"
+@using SoapCapital.Application.Catalog.Users.Commands
+
+<PageHeaderTitle Title="Unsubscribe"></PageHeaderTitle>
+
+<MudContainer Class="pt-8 pb-8" MaxWidth="MaxWidth.Medium">
+    <MudText Align="Align.Center" Class="mb-6">You have successfully been unsubscibed from emails.</MudText>
+    <MudText Align="Align.Center">You can resubscribe here <MudLink Href="/account/email"></MudLink></MudText>
+</MudContainer>
+
+
+@code {
+    [SupplyParameterFromQuery] [Parameter] public string? UserId { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await UsersService.UnSubscribeUser(new UnsubscribeUserRequest(UserId));
+    }
+
+}

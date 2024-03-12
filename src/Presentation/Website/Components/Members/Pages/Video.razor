@@ -1,0 +1,40 @@
+@page "/members/{SubSection}/{Id:int}/{Title}"
+
+@using SoapCapital.Application.Catalog.Videos.Dto
+
+@attribute [StreamRendering]
+
+@inject IVideosService VideosService
+
+<SectionContent SectionName="PageHeaderTitle">
+    <PageHeaderTitle Title="@(VideoModel != null ? VideoModel.Title : "Loading")"></PageHeaderTitle>
+</SectionContent>
+
+@if (VideoModel != null)
+{
+    <VideoPlayer Title="@VideoModel.Title" VideoUrl="@VideoModel.VideoUrl"/>
+    
+    <MudPaper Class="pa-8 mt-5" Elevation="2">
+        <MudText Typo="Typo.h6">@((MarkupString) VideoModel.Details)</MudText>
+    </MudPaper>
+}
+else
+{
+    <MudSkeleton Height="500px" SkeletonType="SkeletonType.Rectangle"/>
+}
+
+@code {
+    [SupplyParameterFromQuery] [Parameter] public int Id { get; set; }
+
+    [SupplyParameterFromQuery] [Parameter] public string? Title { get; set; }
+
+    [SupplyParameterFromQuery] [Parameter] public string? SubSection { get; set; }
+
+    private VideoDto? VideoModel { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        VideoModel = await VideosService.GetVideo(Id);
+    }
+
+}

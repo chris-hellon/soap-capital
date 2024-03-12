@@ -1,0 +1,17 @@
+﻿@inherits LayoutComponentBase
+@layout AccountLayout
+
+<SectionOutlet SectionName="PageHeaderTitle"/>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="pt-8">
+    <MudPaper Elevation="25" Class="pa-8 w-100">
+        <MudGrid Spacing="3">
+            <MudItem lg="4" xs="12">
+                <ManageNavMenu/>
+            </MudItem>
+            <MudItem lg="8" xs="12">
+                @Body
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+</MudContainer>

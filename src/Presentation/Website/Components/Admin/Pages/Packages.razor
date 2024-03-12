@@ -1,0 +1,92 @@
+@page "/admin/packages"
+@using SoapCapital.Application.Catalog.Packages.Dto
+@using System.Globalization
+@using Mapster
+@using SoapCapital.Application.Catalog.Packages.Commands
+@using SoapCapital.Application.Catalog.Packages.Queries
+
+@attribute [StreamRendering]
+
+@inject IPackagesService PackagesService
+
+<SectionContent SectionName="PageHeaderTitle">
+    <PageHeaderTitle Title="Packages"></PageHeaderTitle>
+</SectionContent>
+
+<EntityEditTable @ref="@EntityEditTable" TId="int" TEntity="PackageDto" TRequest="UpdatePackageRequest"
+                 EntityList="TableEntities" Fields="TableFields" SearchFunc="SearchPackages" Loading="Loading"
+                 EntityName="Package"
+                 IdFunc="package => package.Id"
+                 CreateFunc="async package => await PackagesService.CreatePackage(package.Adapt<CreatePackageRequest>())"
+                 UpdateFunc="async package => await PackagesService.UpdatePackage(package.Adapt<UpdatePackageRequest>())"
+                 DeleteFunc="async id => await PackagesService.DeletePackage(id)"
+                 LoadDataFunc="async () => await PackagesService.GetPackages(new GetPackagesRequest(true))">
+    <EditFormContent>
+        <MudGrid>
+            <MudItem lg="8" xs="12">
+                <MudTextField For="@(() => context.Title)" @bind-Value="context.Title" Label="Title" Variant="Variant.Outlined"/>
+            </MudItem>
+            <MudItem lg="4" xs="12">
+                <MudSwitch For="@(() => context.IsHidden)" @bind-Value="@context.IsHidden" Label="Hide from Website?" Color="Color.Info" />
+            </MudItem>
+            <MudItem lg="12" xs="12">
+                <MudTextField For="@(() => context.Price)" @bind-Value="context.Price" Label="Price" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.AttachMoney" Variant="Variant.Outlined"/>
+            </MudItem>
+            <MudItem lg="12" xs="12">
+                <MudTextField For="@(() => context.Title)" @bind-Value="context.StripePriceId" Label="Stripe Price Id" Variant="Variant.Outlined"/>
+            </MudItem>
+            <MudItem lg="6" xs="12">
+                <MudNumericField T="int" For="@(() => context.Duration)" @bind-Value="context.Duration" Label="Duration" Variant="Variant.Outlined"/>
+            </MudItem>
+            <MudItem lg="6" xs="12">
+                <MudSelect For="@(() => context.DurationType)" @bind-Value="context.DurationType" T="string" Label="Duration Type" Variant="Variant.Outlined" AnchorOrigin="Origin.BottomCenter">
+                    <MudSelectItem Value="@("Month")"/>
+                    <MudSelectItem Value="@("Year")"/>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="12">
+                <MudInputLabel Class="mb-3">Description</MudInputLabel>
+                <Editor ClassName="@(ChartsThemeService.IsDarkMode ? "tiny-mce-dark-mode" : "")" @bind-Value="context.Description" Field="@(() => context.Description)" Conf="@TinyMceConfig.Styles(ChartsThemeService.IsDarkMode)" ApiKey="@TinyMceConfig.ApiKey"></Editor>
+            </MudItem>
+        </MudGrid>
+    </EditFormContent>
+</EntityEditTable>
+
+
+@code {
+    private EntityEditTable<PackageDto, UpdatePackageRequest, int>? EntityEditTable { get; set; }
+
+    protected bool Loading = true;
+
+    public IEnumerable<PackageDto> TableEntities { get; set; } = Enumerable.Empty<PackageDto>();
+
+    public List<EntityField<PackageDto>> TableFields =>
+    [
+        new EntityField<PackageDto>(package => package.Title, "Title"),
+        new EntityField<PackageDto>(package => $"{package.Duration} {package.DurationType}", "Duration"),
+        new EntityField<PackageDto>(package => package.Price.ToString("C", CultureInfo.GetCultureInfo("en-US")), "Price"),
+        new EntityField<PackageDto>(package => package.StripePriceId, "Sripe Price Id")
+    ];
+
+    public static bool SearchPackages(string? searchString, PackageDto package)
+    {
+        if (string.IsNullOrWhiteSpace(searchString))
+            return true;
+
+        return package.Title.Contains(searchString,
+                   StringComparison.OrdinalIgnoreCase)
+               || $"{package.Duration} {package.DurationType}"
+                   .Contains(searchString,
+                       StringComparison.OrdinalIgnoreCase)
+               || package.Price.ToString("C", CultureInfo.GetCultureInfo("en-US"))
+                   .Contains(searchString,
+                       StringComparison.OrdinalIgnoreCase);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        TableEntities = await PackagesService.GetPackages(new GetPackagesRequest(true));
+
+        Loading = false;
+    }
+}

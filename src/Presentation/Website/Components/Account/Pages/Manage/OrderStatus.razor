@@ -1,0 +1,176 @@
+@page "/account/my-orders/order-status/{OrderId:int}/{SubscriptionId:int?}"
+
+@using SoapCapital.Application.Catalog.Orders.Dto
+@using SoapCapital.Application.Catalog.Packages.Dto
+@using SoapCapital.Application.Catalog.Subscriptions.Commands
+@using SoapCapital.Application.OpenNode
+@using SoapCapital.Application.OpenNode.DTO
+@using SoapCapital.Application.OpenNode.Queries
+@using SoapCapital.Application.Catalog.Orders.Commands
+@using SoapCapital.Application.Catalog.Notifications.Commands
+@using SoapCapital.Application.Mailing
+@using BlazorTemplater
+@using SoapCapital.Application.Stripe
+@using SoapCapital.Application.Stripe.Queries
+@using SoapCapital.Website.EmailTemplates
+@using Stripe.Checkout
+
+@inject IOrdersService OrdersService
+@inject IOpenNodeService OpenNodeService
+@inject IPackagesService PackagesService
+@inject ISubscriptionsService SubscriptionsService
+@inject ICurrentUser CurrentUser
+@inject INotificationsService NotificationsService
+@inject IMailService MailService
+@inject IStripeService StripeService
+@inject IdentityUserAccessor UserAccessor
+
+<SectionContent SectionName="PageHeaderTitle">
+    <PageHeaderTitle Title="Order Status"/>
+</SectionContent>
+
+<MudCard Elevation="5">
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h4">Your order is Processed.</MudText>
+
+            @if (GetChargeInfoResponse != null)
+            {
+                <MudText Class="mt-5">The current status of your order is: <span class="mud-primary-text fw-bold">@GetChargeInfoResponse.Data?.Status</span></MudText>
+            }
+            else if (StripePaymentSession != null)
+            {
+                <MudText Class="mt-5">The current status of your order is: <span class="mud-primary-text fw-bold">@StripePaymentSession.Status</span></MudText>
+            }
+
+            <MudText Class="mt-5">Please find details of your order below:</MudText>
+        </CardHeaderContent>
+    </MudCardHeader>
+    <MudCardContent>
+        <MudDivider Class="mb-5"/>
+
+        @if (Order != null && Package != null)
+        {
+            <MudGrid>
+                <MudItem lg="12" xs="12">
+                    <MudText>Order Reference <strong>#@OrderId</strong></MudText>
+                </MudItem>
+                <MudItem lg="12" xs="12">
+                    <MudText>Package <strong>@Package.Title</strong></MudText>
+                </MudItem>
+                @if (StartDate.HasValue && EndDate.HasValue)
+                {
+                    <MudItem lg="12" xs="12">
+                        <MudText>Start Date <strong>@StartDate.Value.ToLongDateString() @StartDate.Value.ToShortTimeString()</strong></MudText>
+                    </MudItem>
+                    <MudItem lg="12" xs="12">
+                        <MudText>Start Date <strong>@StartDate.Value.ToLongDateString() @StartDate.Value.ToShortTimeString()</strong></MudText>
+                    </MudItem>
+                }
+            </MudGrid>
+        }
+        <MudDivider Class="mt-5"/>
+    </MudCardContent>
+    <MudCardActions>
+        @if (GetChargeInfoResponse != null && GetChargeInfoResponse.Data?.Status != "paid")
+        {
+            <MudButton Href="/account/subscription" Variant="Variant.Filled" Color="Color.Secondary" Size="Size.Small" StartIcon="@Icons.Material.Filled.Login">Check Subscription Status</MudButton>
+        }
+        else if (StripePaymentSession != null && StripePaymentSession.Status != "paid")
+        {
+            <MudButton Href="/account/subscription" Variant="Variant.Filled" Color="Color.Secondary" Size="Size.Small" StartIcon="@Icons.Material.Filled.Login">Check Subscription Status</MudButton>
+        }
+        else
+        {
+            <MudButton Href="/members/latest-review" Variant="Variant.Filled" Color="Color.Secondary" Size="Size.Small" StartIcon="@Icons.Material.Filled.Login">Go To Members Area</MudButton>
+        }
+    </MudCardActions>
+</MudCard>
+
+@code {
+    [SupplyParameterFromQuery] [Parameter] public int OrderId { get; set; }
+    
+    [SupplyParameterFromQuery] [Parameter] public int? SubscriptionId { get; set; }
+    
+    [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
+    
+    private OrderDto? Order { get; set; }
+    private PackageDto? Package { get; set; }
+    private GetChargeInfoResponseDto? GetChargeInfoResponse { get; set; }
+    private Session? StripePaymentSession { get; set; }
+    private DateTime? StartDate { get; set; }
+    private DateTime? EndDate { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Order = await OrdersService.GetOrder(OrderId);
+
+        if (Order != null)
+        {
+            Package = await PackagesService.GetPackage(Order.PackageId);
+
+            if (!string.IsNullOrEmpty(Order.OpenNodeId))
+            {
+                GetChargeInfoResponse = await OpenNodeService.GetChargeInfo(new GetChargeInfoReqest(Order.OpenNodeId));
+
+                var status = GetChargeInfoResponse.Data?.Status;
+
+                if (status == "paid")
+                {
+                    await CreateSubscription();
+                }
+            }
+            else if (!string.IsNullOrEmpty(Order.StripeSessionId))
+            {
+                StripePaymentSession = await StripeService.GetStripePaymentStatus(new GetStripePaymentStatusRequest(Order.StripeSessionId));
+
+                if (StripePaymentSession.Status == "paid")
+                {
+                    await CreateSubscription();
+                }
+            }
+        }
+    }
+
+    private async Task CreateSubscription()
+    {
+        if (Order is {OrderConfirmed: false})
+        {
+            var createSubscriptionRequest = new CreateSubscriptionRequest(CurrentUser.GetUserId().ToString(), Order.PackageId, Order.Id);
+            var subscriptionId = SubscriptionId ?? await SubscriptionsService.CreateSubscription(createSubscriptionRequest);
+
+            if (subscriptionId.HasValue)
+            {
+                StartDate = createSubscriptionRequest.StartDate;
+                EndDate = createSubscriptionRequest.EndDate;
+
+                await OrdersService.UpdateOrder(new UpdateOrderRequest(Order.Id, Order.OpenNodeId, true, Order.StripeSessionId));
+
+                var url = $"{NavigationManager.BaseUri}account/subscription";
+                await NotificationsService.CreateNotification(new CreateNotificationRequest("Your order has been successful.<br />View your subscription here.", url, false, CurrentUser.GetUserId().ToString()));
+            
+                var user = await UserAccessor.GetRequiredUserAsync(HttpContext);
+            
+                var unsubscribeUrl = $"{NavigationManager.BaseUri}unsubscribe/{user.Id}";
+                var mailHtml = new ComponentRenderer<OrderConfirmationTemplate>()
+                    .Set(c => c.Model,
+                        new OrderConfirmationTemplateModel(Order.Id,
+                            Package?.Title!,
+                            StartDate!.Value!,
+                            EndDate!.Value!,
+                            unsubscribeUrl))
+                    .Render();
+
+                if (user.Email != null)
+                {
+                    var mailRequest = new MailRequest(
+                        to: [user.Email],
+                        subject:"Order Confirmation",
+                        body: mailHtml);
+        
+                    await MailService.SendAsync(mailRequest);
+                }
+            }
+        }
+    }
+}

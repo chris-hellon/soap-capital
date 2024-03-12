@@ -1,0 +1,201 @@
+@page "/account/subscription"
+@using SoapCapital.Application.Catalog.Subscriptions.Dto
+@using SoapCapital.Application.Catalog.Subscriptions.Queries
+@using SoapCapital.Application.Catalog.Orders.Dto
+@using SoapCapital.Application.Catalog.Orders.Queries
+@using SoapCapital.Application.Catalog.Packages.Dto
+@using SoapCapital.Application.OpenNode
+@using SoapCapital.Application.OpenNode.Commands
+@using SoapCapital.Application.OpenNode.DTO
+@using SoapCapital.Application.OpenNode.Queries
+@using SoapCapital.Application.Catalog.Orders.Commands
+@using SoapCapital.Infrastructure.Identity
+@using System.Globalization
+@using SoapCapital.Application.Stripe
+@using SoapCapital.Application.Stripe.Queries
+@using Stripe.Checkout
+
+@inject ISubscriptionsService SubscriptionsService
+@inject IOrdersService OrdersService
+@inject ICurrentUser CurrentUser
+@inject IOpenNodeService OpenNodeService
+@inject IPackagesService PackagesService
+@inject IStripeService StripeService
+@inject IdentityUserAccessor UserAccessor
+
+<SectionContent SectionName="PageHeaderTitle">
+    <PageHeaderTitle Title="Subscription"/>
+</SectionContent>
+
+@if (Package != null)
+{
+    <MudCard Elevation="5">
+        <MudCardHeader>
+            <CardHeaderContent>
+                <MudText Typo="Typo.h6">Current Subscription</MudText>
+            </CardHeaderContent>
+        </MudCardHeader>
+        <MudCardContent>
+            <MudDivider Class="mb-5"/>
+
+            @if (OutstandingOrder != null)
+            {
+                <MudText Class="mb-5">You currently have an outstanding order for <span class="mud-primary-text fw-bold">@Package.Title</span>.</MudText>
+                if (GetChargeInfoResponse != null)
+                {
+                    <MudText>The current status of your order is: <span class="mud-primary-text fw-bold">@GetChargeInfoResponse.Data?.Status</span></MudText>
+                }
+                else if (StripePaymentSession != null)
+                {
+                    <MudText>The current status of your order is: <span class="mud-primary-text fw-bold">@StripePaymentSession.Status</span></MudText>
+                }
+            }
+            else if (UserSubscription != null)
+            {
+                <MudText Class="mb-5">Current Package: <span class="mud-primary-text fw-bold">@Package.Title (@(UserSubscription.Price.ToString("C", CultureInfo.GetCultureInfo("en-US"))))</span></MudText>
+                <MudText Class="mb-5">Start Date: <span class="mud-primary-text fw-bold">@UserSubscription.StartDate.ToLongDateString() @UserSubscription.StartDate.ToShortTimeString()</span></MudText>
+                <MudText Class="mb-5">End Date: <span class="mud-primary-text fw-bold">@UserSubscription.EndDate.ToLongDateString() @UserSubscription.EndDate.ToShortTimeString()</span></MudText>
+            }
+            else if (NextSubscription != null)
+            {
+                <MudText Class="mb-5">Next Package: <span class="mud-primary-text fw-bold">@Package.Title (@(NextSubscription.Price.ToString("C", CultureInfo.GetCultureInfo("en-US"))))</span></MudText>
+                <MudText Class="mb-5">Start Date: <span class="mud-primary-text fw-bold">@NextSubscription.StartDate.ToLongDateString() @NextSubscription.StartDate.ToShortTimeString()</span></MudText>
+                <MudText Class="mb-5">End Date: <span class="mud-primary-text fw-bold">@NextSubscription.EndDate.ToLongDateString() @NextSubscription.EndDate.ToShortTimeString()</span></MudText>
+            }
+            else if (RemainingDays <= 7)
+            {
+                switch (RemainingDays)
+                {
+                    case 0:
+                        <MudText Class="mb-5">Your subscription will expire today.</MudText>
+                        break;
+                    case < 0:
+                        <MudText Class="mb-5">Your subscription has expired.</MudText>
+                        break;
+                    default:
+                        <MudText Class="mb-5">Your subscription will expire in @RemainingDays days.</MudText>
+                        break;
+                }
+
+                <MudText Class="mb-5">
+                    To avoid access issues, renew your subscription using the link below.
+                </MudText>
+            }
+            <MudDivider Class="mt-5"/>
+        </MudCardContent>
+        <MudCardActions>
+            <div class="d-flex justify-space-between flex-grow-1">
+                @if (GetChargeInfoResponse != null && GetChargeInfoResponse.Data?.Status == "unpaid")
+                {
+                    <EditForm Model="OutstandingOrder" FormName="create-bitcoin-order" OnValidSubmit="CreateNewBitcoinOrder" method="post">
+                        <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" StartIcon="@Icons.Material.Filled.Login">
+                            Complete Order
+                        </MudButton>
+                    </EditForm>
+                    <MudButton Href="/choose-membership" Variant="Variant.Filled" Color="Color.Secondary" Size="Size.Small" StartIcon="@Icons.Material.Filled.Create">Create New Order</MudButton>
+                }
+                @if (UserSubscription != null)
+                {
+                    <MudButton Href="/members/latest-review" StartIcon="@Icons.Material.Filled.OpenInNew" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small">Members Area</MudButton>
+                }
+
+                @if (RemainingDays.HasValue)
+                {
+                    if (RemainingDays.Value <= 7)
+                    {
+                        <MudButton Href="/choose-membership/renew" StartIcon="@Icons.Material.Filled.OpenInNew" Variant="Variant.Filled" Color="Color.Secondary" Size="Size.Small">Renew Subscription</MudButton>
+                    }
+                    else {if (UserSubscription != null && UserSubscription.PackageId != 3)
+                        {
+                            <MudButton Href="/choose-membership/upgrade" StartIcon="@Icons.Material.Filled.Upgrade" Variant="Variant.Filled" Color="Color.Secondary" Size="Size.Small">Upgrade Subscription</MudButton>
+                        }
+                    }
+                }
+                else if (UserSubscription != null && UserSubscription.PackageId != 3)
+                {
+                    <MudButton Href="/choose-membership/upgrade" StartIcon="@Icons.Material.Filled.Upgrade" Variant="Variant.Filled" Color="Color.Secondary" Size="Size.Small">Upgrade Subscription</MudButton>
+                }
+            </div>
+        </MudCardActions>
+    </MudCard>
+}
+
+@code {
+    private SubscriptionDto? UserSubscription { get; set; }
+    private SubscriptionDto? NextSubscription { get; set; }
+    private OrderDto? OutstandingOrder { get; set; }
+    private int? RemainingDays { get; set; }
+    private PackageDto? Package { get; set; }
+    private GetChargeInfoResponseDto? GetChargeInfoResponse { get; set; }
+    private Session? StripePaymentSession { get; set; }
+    private ApplicationUser? user { get; set; }
+    [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var userId = CurrentUser.GetUserId().ToString();
+        UserSubscription = await SubscriptionsService.GetUserSubscription(new GetUserSubscriptionRequest(userId));
+
+        if (UserSubscription == null)
+        {
+            OutstandingOrder = await OrdersService.GetUsersOutstandingOrders(new GetUsersOutstandingOrderRequest(userId));
+
+            if (OutstandingOrder != null && !string.IsNullOrEmpty(OutstandingOrder.OpenNodeId))
+            { 
+                Package = await PackagesService.GetPackage(OutstandingOrder.PackageId);
+                
+                if (!string.IsNullOrEmpty(OutstandingOrder.OpenNodeId))
+                {
+                    GetChargeInfoResponse = await OpenNodeService.GetChargeInfo(new GetChargeInfoReqest(OutstandingOrder.OpenNodeId));
+                }
+                else if (!string.IsNullOrEmpty(OutstandingOrder.StripeSessionId))
+                {
+                    StripePaymentSession = await StripeService.GetStripePaymentStatus(new GetStripePaymentStatusRequest(OutstandingOrder.StripeSessionId));
+                }
+            }
+        }
+        else
+        {
+            var currentDate = DateTime.Now;
+            var subscriptionEndDate = UserSubscription.EndDate;
+
+            var diff = subscriptionEndDate - currentDate;
+            RemainingDays = diff.Days;
+
+            if (RemainingDays <= 7)
+            {
+                NextSubscription = await SubscriptionsService.GetUserSubscription(new GetUserSubscriptionRequest(userId, true, UserSubscription.Id));
+            }
+
+            Package = await PackagesService.GetPackage(UserSubscription.PackageId);
+        }
+    }
+
+    private async Task CreateNewBitcoinOrder()
+    {
+        if (OutstandingOrder != null && Package != null)
+        {
+            var successUrl = $"{NavigationManager.BaseUri}account/my-orders/order-status/{OutstandingOrder.Id}";
+            var webhookUrl = $"{NavigationManager.BaseUri}open-node-webhook/{OutstandingOrder.Id}";
+
+            user = await UserAccessor.GetRequiredUserAsync(HttpContext);
+
+            var createChargeResponse = await OpenNodeService.CreateOpenNodeCharge(new CreateOpenNodeChargeRequest(
+                Package.Title!,
+                Package.Price!,
+                OutstandingOrder.Id,
+                user.UserName!,
+                user.Email!,
+                user.Email!,
+                successUrl,
+                webhookUrl));
+
+            if (createChargeResponse is {Data: not null} && !string.IsNullOrEmpty(createChargeResponse.Data.CheckoutUrl))
+            {
+                await OrdersService.UpdateOrder(new UpdateOrderRequest(OutstandingOrder.Id, createChargeResponse.Data?.Id, false, null));
+                if (createChargeResponse.Data?.CheckoutUrl is not null) NavigationManager.NavigateTo(createChargeResponse.Data?.CheckoutUrl!);
+            }
+        }
+    }
+
+}

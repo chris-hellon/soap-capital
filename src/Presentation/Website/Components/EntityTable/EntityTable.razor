@@ -1,0 +1,51 @@
+@typeparam TEntity
+
+<MudTable @ref="_table" Items="@EntityList" Dense="false" Elevation="0" Loading="Loading" LoadingProgressColor="Color.Primary" Bordered="true" Filter="LocalSearch" SortLabel="Sort By" HeaderClass="mud-bg-black mud-text-white">
+    <ToolBarContent>
+        <MudTextField @bind-Value="SearchString" Immediate="true" FullWidth="false"
+                      Placeholder="Search" Adornment="Adornment.End"
+                      AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0 mb-3">
+        </MudTextField>
+    </ToolBarContent>
+    <HeaderContent>
+        @if (Fields != null)
+        {
+            foreach (var field in Fields)
+            {
+                <MudTh>
+                    @if (field.NavigateUrlFunc == null)
+                    {
+                        <MudTableSortLabel Class="mud-text-white" SortBy="@field.ValueFunc">@field.DisplayName</MudTableSortLabel>
+                    }
+                </MudTh>
+            }
+        }
+    </HeaderContent>
+    <RowTemplate>
+        @if (EntityList != null)
+        {
+            if (Fields != null)
+            {
+                foreach (var field in Fields)
+                {
+                    <MudTd DataLabel="@field.DisplayName" Style="@(field.Width != null ? $"width:{field.Width};" : "")">
+                        @if (field.NavigateUrlFunc != null)
+                        {
+                            <MudButton Href="@field.NavigateUrlFunc(context)" Target="@(!string.IsNullOrEmpty(field.Target) ? field.Target : "_self")" Color="Color.Primary" StartIcon="@Icons.Material.Filled.OpenInNew" Size="Size.Small" Variant="Variant.Filled">@field.DisplayName</MudButton>
+                        }
+                        else
+                        {
+                            <MudHighlighter Text="@field.ValueFunc(context)?.ToString()" HighlightedText="@SearchString" Markup="true"/>
+                        }
+                    </MudTd>
+                }
+            }
+        }
+    </RowTemplate>
+    <LoadingContent>
+        <MudText>Loading...</MudText>
+    </LoadingContent>
+    <PagerContent>
+        <MudTablePager/>
+    </PagerContent>
+</MudTable>

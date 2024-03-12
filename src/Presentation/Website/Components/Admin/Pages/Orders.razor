@@ -1,0 +1,52 @@
+@page "/admin/orders"
+@using SoapCapital.Application.Catalog.Orders.Dto
+@using SoapCapital.Application.Catalog.Orders.Queries
+@using System.Globalization
+
+@attribute [StreamRendering]
+
+@inject IOrdersService OrdersService
+
+<SectionContent SectionName="PageHeaderTitle">
+    <PageHeaderTitle Title="Orders"></PageHeaderTitle>
+</SectionContent>
+
+<EntityTable TEntity="OrderDto" EntityList="TableEntities" Fields="TableFields" SearchFunc="SearchOrders" Loading="Loading" />
+
+@code {
+    protected bool Loading = true;
+
+    public IEnumerable<OrderDto> TableEntities { get; set; } = Enumerable.Empty<OrderDto>();
+
+    public static List<EntityField<OrderDto>> TableFields =>
+    [
+        new EntityField<OrderDto>(order => order.UserName, "Username"),
+        new EntityField<OrderDto>(order => order.CreateDate.ToShortDateString(), "Order Date"),
+        new EntityField<OrderDto>(order => order.PackageName, "Package"),
+        new EntityField<OrderDto>(order => order.Amount.ToString("C", CultureInfo.GetCultureInfo("en-US")), "Price"),
+        new EntityField<OrderDto>(order => order.OrderConfirmed, "Order Complete")
+    ];
+
+    public static bool SearchOrders(string? searchString, OrderDto package)
+    {
+        if (string.IsNullOrWhiteSpace(searchString))
+            return true;
+
+        return (package.UserName != null && package.UserName.Contains(searchString,
+                   StringComparison.OrdinalIgnoreCase))
+               || package.PackageName.Contains(searchString,
+                   StringComparison.OrdinalIgnoreCase)
+               || package.CreateDate.ToShortDateString().Contains(searchString,
+                   StringComparison.OrdinalIgnoreCase)
+               || package.Amount.ToString("C", CultureInfo.GetCultureInfo("en-US"))
+                   .Contains(searchString,
+                       StringComparison.OrdinalIgnoreCase);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        TableEntities = await OrdersService.GetOrders(new GetOrdersRequest());
+
+        Loading = false;
+    }
+}

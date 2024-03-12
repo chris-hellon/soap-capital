@@ -1,0 +1,102 @@
+@if (Title != null)
+{
+    <div class="col-lg-12 d-lg-none d-block">
+        <div class="bg-dark text-center py-2 px-3 ">
+            <h5 class="m-0 text-white">@Title</h5>
+            @if (Date.HasValue)
+            {
+                <small class="text-primary">@Date.Value.ToShortDateString()</small>   
+            }
+        </div>
+    </div>
+}
+
+<div class="video-frame position-relative @(!Admin ? "wow" : "")">
+    <div class="relative d-block overflow-hidden video-container" style="@(!string.IsNullOrEmpty(Padding) ? $"padding:{Padding} !important;" : "")">
+        @{
+
+            var videoUrl = VideoUrl;
+
+            if (videoUrl != null && (videoUrl.Contains("youtu.be") || videoUrl.Contains("youtube")) && !videoUrl.Contains("embed") && !videoUrl.Contains("watch"))
+            {
+                var pos = videoUrl.LastIndexOf("/", StringComparison.Ordinal) + 1;
+                var videoKey = videoUrl.Substring(pos, videoUrl.Length - pos);
+
+                videoUrl = $"https://www.youtube.com/embed/{videoKey}";
+            }
+            else if (videoUrl != null && (videoUrl.Contains("youtu.be") || videoUrl.Contains("youtube")) && videoUrl.Contains("watch"))
+            {
+                var videoUrlSplit = videoUrl.Split(new string[] { "v=" }, StringSplitOptions.None);
+
+                var videoKey = "";
+
+                if (videoUrlSplit[1].Contains("&"))
+                {
+                    var pos = videoUrlSplit[1].IndexOf("&", StringComparison.Ordinal);
+                    videoKey = videoUrlSplit[1].Substring(0, pos);
+                }
+                else
+                {
+                    videoKey = videoUrlSplit[1];
+                }
+
+                videoUrl = $"https://www.youtube.com/embed/{videoKey}";
+            }
+            else if (videoUrl != null && videoUrl.Contains("vimeo") && !videoUrl.Contains("player."))
+            {
+                var pos = videoUrl[..videoUrl.LastIndexOf("/", StringComparison.Ordinal)].LastIndexOf("/", StringComparison.Ordinal) + 1;
+
+                var videoKey = videoUrl.Substring(pos, videoUrl.Length - pos);
+                string? secondVideoKey = null;
+
+                if (videoKey.Contains("vimeo"))
+                {
+                    pos = videoUrl.LastIndexOf("/", StringComparison.Ordinal) + 1;
+                    videoKey = videoUrl.Substring(pos, videoUrl.Length - pos);
+                }
+                else if (videoKey.Contains("/"))
+                {
+                    string?[] videoKeySplit = videoKey.Split("/");
+                    videoKey = videoKeySplit[0];
+                    secondVideoKey = videoKeySplit[1];
+                }
+
+                videoUrl = $"https://player.vimeo.com/video/{videoKey}?{(secondVideoKey != null ? $"h={secondVideoKey}&" : "")}title=0&byline=0&portrait=0";
+            }
+
+            <iframe src="@videoUrl" title="@Title" class="w-100 h-100 absolute top-0 left-0" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+        }
+
+        @if (Title != null)
+        {
+            <div class="bg-dark text-center position-absolute top-0 end-0 py-2 px-3 d-none d-lg-block">
+                <h5 class="m-0 text-white">@Title</h5>
+                @if (Date.HasValue)
+                {
+                    <small class="text-primary">@Date.Value.ToShortDateString()</small>   
+                }
+            </div>
+        }
+
+        @if (Admin)
+        {
+            <div class="bg-dark text-center position-absolute bottom-0 start-0 py-2 px-3">
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#@($"deleteVideo{Id}Modal")">
+                    Delete
+                </button>
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#@($"editVideo{Id}Modal")">
+                    Edit
+                </button>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public int? Id { get; set; }
+    [Parameter] public bool Admin { get; set; }
+    [Parameter] public string? Title { get; set; }
+    [Parameter] public string? VideoUrl { get; set; }
+    [Parameter] public DateTime? Date { get; set; }
+    [Parameter] public string? Padding { get; set; }
+}

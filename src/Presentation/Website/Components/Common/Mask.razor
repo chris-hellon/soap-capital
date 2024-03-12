@@ -1,0 +1,8 @@
+ <div class="mask" style="background-color:@BackgroundColor">
+     @MaskContent
+ </div>
+
+@code {
+    [Parameter] public string? BackgroundColor { get; set; }
+    [Parameter] public RenderFragment? MaskContent { get; set; }
+}

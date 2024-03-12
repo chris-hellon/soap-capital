@@ -1,0 +1,51 @@
+@using MudExtensions.Enums
+
+@attribute [StreamRendering]
+
+<div class="full-page-banner">
+    <Mask BackgroundColor="rgba(0, 0, 0, 0.7);">
+        <MaskContent>
+            @if (!Loading)
+            {
+                <MudContainer MaxWidth="MaxWidth.False" Class="d-flex flex-column align-center justify-center h-100">
+                    <MudImage Src="@ImageUrl" Class="img-fluid full-page-banner-image" Alt="Soap Captial log"></MudImage>
+
+                    @if (!string.IsNullOrEmpty(Title))
+                    {
+                        <MudText Typo="Typo.h1" Style="@(HiddenTitle ? "display:none;" : "")" Class="full-page-banner-title mud-text-white">@Title</MudText>
+                    }
+
+                    @if (!string.IsNullOrEmpty(SubTitle))
+                    {
+                        <MudText Typo="Typo.h2" Class="full-page-banner-title mud-text-white">@SubTitle</MudText>
+                    }
+                </MudContainer>
+                
+                <MudAnimate Selector=".full-page-banner-image" Delay="0.15" Duration="1.5" Value="360" IterationCount="1" Infinite="false" AnimationType="AnimationType.Fade" AnimationFillMode="AnimationFillMode.Backwards" AnimationDirection="AnimationDirection.Normal" AnimationTiming="AnimationTiming.EaseIn"></MudAnimate>
+            }
+        </MaskContent>
+    </Mask>
+</div>
+
+@* <MudAnimate Selector=".full-page-banner-title" Delay="1" Duration="1.5" Value="360" IterationCount="1" Infinite="false" AnimationType="AnimationType.Fade" AnimationFillMode="AnimationFillMode.Backwards" AnimationDirection="AnimationDirection.Normal" AnimationTiming="AnimationTiming.EaseIn"></MudAnimate> *@
+
+
+@code {
+
+    [Parameter] public string? ImageUrl { get; set; }
+    [Parameter] public bool HiddenTitle { get; set; }
+    [Parameter] public string? Title { get; set; }
+    [Parameter] public string? SubTitle { get; set; }
+
+    private bool Loading { get; set; } = true;
+    
+    protected override async Task OnAfterRenderAsync ( bool firstRender ) 
+    { 
+        if (firstRender) 
+        { 
+            await Task.Yield();
+            Loading = false;
+            StateHasChanged();
+        } 
+    } 
+}

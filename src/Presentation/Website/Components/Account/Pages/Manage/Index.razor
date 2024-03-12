@@ -1,0 +1,98 @@
+﻿@page "/account/profile"
+
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Identity
+@using SoapCapital.Infrastructure.Identity
+
+@inject UserManager<ApplicationUser> UserManager
+@inject SignInManager<ApplicationUser> SignInManager
+@inject IdentityUserAccessor UserAccessor
+@inject IdentityRedirectManager RedirectManager
+
+<SectionContent SectionName="PageHeaderTitle">
+    <PageHeaderTitle Title="Profile"/>
+</SectionContent>
+
+<StatusMessage/>
+
+<EditForm Model="Input" FormName="profile" OnValidSubmit="OnValidSubmitAsync" method="post">
+    <MudGrid Spacing="1">
+        <DataAnnotationsValidator/>
+
+        <MudItem xs="12">
+            <div class="mud-input-control mud-input-input-control">
+                <div class="mud-input-control-input-container">
+                    <div class="mud-input mud-input-text  mud-input-outlined mud-shrink">
+                        <InputText @bind-Value="@username" disabled="true" class="mud-input-slot mud-input-root mud-input-root-outlined" autocomplete="username" aria-required="true" placeholder="Username"/>
+                        <div class="mud-input-outlined-border"></div>
+                    </div>
+                    <label class="mud-input-label mud-input-label-animated mud-input-label-text mud-input-label-inputcontrol" for="@username">Username</label>
+                </div>
+            </div>
+        </MudItem>
+        <MudItem xs="12">
+            <div class="mud-input-control mud-input-input-control">
+                <div class="mud-input-control-input-container">
+                    <div class="mud-input mud-input-text  mud-input-outlined mud-shrink">
+                        <InputText @bind-Value="@Input.DiscordUsername" class="mud-input-slot mud-input-root mud-input-root-outlined" autocomplete="username" aria-required="true" placeholder="Username"/>
+                        <div class="mud-input-outlined-border"></div>
+                    </div>
+                    <label class="mud-input-label mud-input-label-animated mud-input-label-text mud-input-label-inputcontrol" for="@Input.DiscordUsername">Discord Username</label>
+                </div>
+            </div>
+
+            <ValidationMessage For="() => Input.DiscordUsername" class="mud-input-helper-text mud-input-error"/>
+        </MudItem>
+
+        <MudItem xs="12" Class="d-flex justify-center">
+            <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large" StartIcon="@Icons.Material.Filled.Login" Style="width: 100%;">
+                Save
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+</EditForm>
+
+@code {
+    private ApplicationUser user = default!;
+    private string? username;
+    private string? phoneNumber;
+
+    [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
+
+    [SupplyParameterFromForm] private InputModel Input { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        user = await UserAccessor.GetRequiredUserAsync(HttpContext);
+        username = await UserManager.GetUserNameAsync(user);
+        phoneNumber = await UserManager.GetPhoneNumberAsync(user);
+
+        Input.PhoneNumber ??= phoneNumber;
+        Input.DiscordUsername ??= user.DiscordUsername;
+    }
+
+    private async Task OnValidSubmitAsync()
+    {
+        var user = await UserAccessor.GetRequiredUserAsync(HttpContext);
+
+        if (Input.DiscordUsername != null)
+            user.DiscordUsername = Input.DiscordUsername;
+
+        await UserManager.UpdateAsync(user);
+
+        await SignInManager.RefreshSignInAsync(user);
+        RedirectManager.RedirectToCurrentPageWithStatus("Your profile has been updated", HttpContext);
+    }
+
+    private sealed class InputModel
+    {
+        [Phone]
+        [Display(Name = "Phone number")]
+        public string? PhoneNumber { get; set; }
+
+        [Required]
+        [Display(Name = "Discord Username")]
+        public string? DiscordUsername { get; set; }
+    }
+
+}

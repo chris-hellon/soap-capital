@@ -1,0 +1,286 @@
+@page "/admin/dashboard"
+@using SoapCapital.Application.Catalog.Orders.Dto
+@using SoapCapital.Application.Catalog.Orders.Queries
+@using SoapCapital.Application.Catalog.Packages.Dto
+@using SoapCapital.Application.Catalog.Packages.Queries
+@using SoapCapital.Application.Catalog.Subscriptions.Dto
+@using SoapCapital.Application.Catalog.Subscriptions.Queries
+@using SoapCapital.Application.Catalog.Users.Dto
+@using SoapCapital.Application.Catalog.Users.Queries
+@using ApexCharts
+@using System.Globalization
+
+@attribute [StreamRendering]
+
+@inject IOrdersService OrdersService
+@inject IUsersService UsersService
+@inject ISubscriptionsService SubscriptionsService
+@inject IPackagesService PackagesService
+
+<SectionContent SectionName="PageHeaderTitle">
+    <PageHeaderTitle Title="Dashboard"></PageHeaderTitle>
+</SectionContent>
+
+<MudGrid>
+    <MudItem lg="6" xs="12">
+        <MudPaper Class="pa-5 d-flex align-center justify-space-between" Elevation="3">
+            <div>
+                <MudText Typo="Typo.h5">Total Paid Orders</MudText>
+                <MudText Typo="Typo.h6" Color="MudBlazor.Color.Primary">@(Orders.Any() ? Orders.Count(x => x.OrderConfirmed) : "Loading")</MudText>
+            </div>
+
+            <MudIcon Icon="@Icons.Material.Filled.Payment" Size="MudBlazor.Size.Large"></MudIcon>
+        </MudPaper>
+    </MudItem>
+    <MudItem lg="6" xs="12">
+        <MudPaper Class="pa-5 d-flex align-center justify-space-between" Elevation="3">
+            <div>
+                <MudText Typo="Typo.h5">Total Revenue</MudText>
+                <MudText Typo="Typo.h6" Color="MudBlazor.Color.Primary">@(Orders.Any() ? Orders.Sum(x => x.Amount).ToString("C", CultureInfo.GetCultureInfo("en-US")) : "Loading")</MudText>
+            </div>
+
+            <MudIcon Icon="@Icons.Material.Filled.Payment" Size="MudBlazor.Size.Large"></MudIcon>
+        </MudPaper>
+    </MudItem>
+    <MudItem lg="6" xs="12">
+        <MudPaper Class="pa-5 d-flex align-center justify-space-between" Elevation="3">
+            <div>
+                <MudText Typo="Typo.h5">Active Users</MudText>
+                <MudText Typo="Typo.h6" Color="MudBlazor.Color.Primary">@(Users.Any() ? Users.Count() : "Loading")</MudText>
+            </div>
+
+            <MudIcon Icon="@Icons.Material.Filled.Person" Size="MudBlazor.Size.Large"></MudIcon>
+        </MudPaper>
+    </MudItem>
+    <MudItem lg="6" xs="12">
+        <MudPaper Class="pa-5 d-flex align-center justify-space-between" Elevation="3">
+            <div>
+                <MudText Typo="Typo.h5">Expiring Users (7 Days)</MudText>
+                <MudText Typo="Typo.h6" Color="MudBlazor.Color.Primary">@(ExpiringUsers.Any() ? ExpiringUsers.Count() : "Loading")</MudText>
+            </div>
+
+            <MudIcon Icon="@Icons.Material.Filled.CrisisAlert" Size="MudBlazor.Size.Large"></MudIcon>
+        </MudPaper>
+    </MudItem>
+    <MudItem lg="12" xs="12">
+        <MudCard Elevation="3">
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.h6">Paid Orders To Date</MudText>
+                </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent>
+                @if (Packages.Any())
+                {
+                    <ApexChart @ref="@_packageMonthlyChart"
+                               TItem="MonthAmount"
+                               XAxisType="XAxisType.Datetime"
+                               Options="new ApexChartOptions<MonthAmount> {Theme = new Theme {Mode = ChartsThemeService.IsDarkMode ? Mode.Dark : Mode.Light, Palette = PaletteType.Palette1}}">
+
+                        @{
+                            foreach (var packageMonthly in PackageMonthlySummaries)
+                            {
+                                <ApexPointSeries
+                                    TItem="MonthAmount"
+                                    Items="packageMonthly.MonthlyAmounts"
+                                    SeriesType="@SeriesType.Bar"
+                                    Name="@packageMonthly.PackageName"
+                                    XValue="@(e => DateTimeOffset.Parse(e.MonthYear.ToString()).FirstDayOfMonth().ToUnixTimeMilliseconds())"
+                                    YAggregate="@(e => e.Count())"
+                                    OrderBy="e => e.Y"/>
+                            }
+                        }
+                    </ApexChart>
+                }
+                else
+                {
+                    <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="500px"/>
+                }
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+    <MudItem lg="12" xs="12">
+        <MudCard Elevation="3">
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.h6">Sign Ups To Date</MudText>
+                </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent>
+                @if (Users.Any())
+                {
+                    <ApexChart @ref="@_signUpsChart"
+                               TItem="UserDto"
+                               XAxisType="XAxisType.Datetime"
+                               Options="new ApexChartOptions<UserDto> {Theme = new Theme {Mode = ChartsThemeService.IsDarkMode ? Mode.Dark : Mode.Light, Palette = PaletteType.Palette1}}">
+
+                        <ApexPointSeries
+                            TItem="UserDto"
+                            Items="Users"
+                            SeriesType="@SeriesType.Bar"
+                            Name="Users"
+                            XValue="@(e => DateTimeOffset.Parse(e.SignUpDate.ToString()).FirstDayOfMonth().ToUnixTimeMilliseconds())"
+                            YAggregate="@(e => e.Count())"
+                            OrderBy="e => e.Y"/>
+                    </ApexChart>
+                }
+                else
+                {
+                    <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="500px"/>
+                }
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+    <MudItem lg="6" xs="12">
+        <MudCard Elevation="3">
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.h6">Orders By Package</MudText>
+                </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent>
+                @if (Orders.Any())
+                {
+                    <ApexChart @ref="@_ordersPieChart"
+                               TItem="OrderDto"
+                               Options="new ApexChartOptions<OrderDto> {Theme = new Theme {Mode = ChartsThemeService.IsDarkMode ? Mode.Dark : Mode.Light, Palette = PaletteType.Palette1}}">
+    
+                        <ApexPointSeries
+                            TItem="OrderDto"
+                            Items="Orders"
+                            SeriesType="@SeriesType.Pie"
+                            Name="Orders"
+                            XValue="@(e => e.PackageName)"
+                            YAggregate="@(e => e.Count())"
+                            OrderBy="e => e.Y"/>
+                    </ApexChart>
+                }
+                else
+                {
+                    <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="300px"/>
+                }
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+    <MudItem lg="6" xs="12">
+                <MudCard Elevation="3">
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.h6">Revenue By Package</MudText>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        @if (Orders.Any())
+                        {
+                            <ApexChart @ref="@_ordersRevenuePieChart"
+                                       TItem="OrderDto"
+                                       Options="_ordersRevenuePieChartOptions">
+        
+                                <ApexPointSeries
+                                    TItem="OrderDto"
+                                    Items="Orders"
+                                    SeriesType="@SeriesType.Pie"
+                                    Name="Orders"
+                                    XValue="@(e => e.PackageName)"
+                                    YAggregate="@(e => e.Sum(x => x.Amount))"
+                                    OrderBy="e => e.Y"/>
+                            </ApexChart>
+                        }
+                        else
+                        {
+                            <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="300px"/>
+                        }
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+</MudGrid>
+
+@code {
+    private IEnumerable<OrderDto> Orders { get; set; } = Array.Empty<OrderDto>();
+    private IEnumerable<UserDto> ExpiringUsers { get; set; } = Array.Empty<UserDto>();
+    private IEnumerable<UserDto> Users { get; set; } = Array.Empty<UserDto>();
+    private IEnumerable<SubscriptionDto> Subscriptions { get; set; } = Array.Empty<SubscriptionDto>();
+    private IEnumerable<PackageDto> Packages { get; set; } = Array.Empty<PackageDto>();
+    private IEnumerable<PackageMonthlySummary> PackageMonthlySummaries { get; set; } = Array.Empty<PackageMonthlySummary>();
+    private ApexChart<MonthAmount>? _packageMonthlyChart;
+    private ApexChart<UserDto>? _signUpsChart;
+    private ApexChart<OrderDto>? _ordersPieChart;
+    private ApexChart<OrderDto>? _ordersRevenuePieChart;
+    private ApexChartOptions<OrderDto>? _ordersRevenuePieChartOptions;
+
+    protected override void OnInitialized()
+    {
+        ChartsThemeService.OnDarkModeChanged += UpdateChart;
+        
+        _ordersRevenuePieChartOptions = new ApexChartOptions<OrderDto>
+        {
+            Theme = new Theme {Mode = ChartsThemeService.IsDarkMode ? Mode.Dark : Mode.Light, Palette = PaletteType.Palette1},
+            Yaxis =
+            [
+                new YAxis
+                {
+                    Labels = new YAxisLabels
+                    {
+                        Formatter = @"function (value) {
+                    return '$' + Number(value).toLocaleString();}"
+                    }
+                }
+            ]
+        };
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var ordersTask = Task.Run(() => OrdersService.GetOrders(new GetOrdersRequest()));
+        var expiringUsersTask = Task.Run(() => UsersService.GetExpiringUsers(new GetExpiringUsersRequest()));
+        var usersTask = Task.Run(() => UsersService.GetUsers(new GetUsersRequest()));
+        var subscriptionsTask = Task.Run(() => SubscriptionsService.GetSubscriptions(new GetSubscriptionsRequest()));
+        var packagesTask = Task.Run(() => PackagesService.GetPackages(new GetPackagesRequest(false)));
+
+        await Task.WhenAll(ordersTask, expiringUsersTask, usersTask, subscriptionsTask, packagesTask);
+        
+        Orders = ordersTask.Result;
+        ExpiringUsers = expiringUsersTask.Result;
+        Users = usersTask.Result;
+        Subscriptions = subscriptionsTask.Result;
+        Packages = packagesTask.Result;
+        PackageMonthlySummaries = Orders.GroupBy(
+            o => o.PackageName,
+            (packageName, group) => new PackageMonthlySummary
+            {
+                PackageName = packageName,
+                MonthlyAmounts = group.GroupBy(
+                    o => o.CreateDate,
+                    (key, monthlyGroup) => new MonthAmount
+                    {
+                        MonthYear = key,
+                        Amount = monthlyGroup.Sum(o => o.Amount)
+                    }).ToList()
+            });
+    }
+
+    private async Task UpdateChart()
+    {
+        if (_packageMonthlyChart != null && _signUpsChart != null && _ordersPieChart != null && _ordersRevenuePieChart != null)
+        {
+            await _packageMonthlyChart.RenderAsync();
+            await _signUpsChart.RenderAsync();   
+            await _ordersPieChart.RenderAsync();  
+            await _ordersRevenuePieChart.RenderAsync();  
+        }
+    }
+
+    public class MonthAmount
+    {
+        public DateTime MonthYear { get; set; }
+        public int Year { get; set; }
+        public decimal Amount { get; set; }
+    }
+
+    public class PackageMonthlySummary
+    {
+        public string? PackageName { get; set; }
+        public List<MonthAmount> MonthlyAmounts { get; set; } = [];
+    }
+
+}

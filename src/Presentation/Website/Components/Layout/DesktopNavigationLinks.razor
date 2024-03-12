@@ -1,0 +1,88 @@
+ @using SoapCapital.Infrastructure.Configuration
+ @using Microsoft.Extensions.Options
+ @inject IOptions<AppSettings> AppSettings
+ 
+@if (AppSettings.Value.NavigationLinks.Any())
+{
+    foreach (var navigationLink in AppSettings.Value.NavigationLinks)
+            {
+                if (navigationLink.RequiresAuth.HasValue && navigationLink.RequiresAuth.Value)
+                {
+                    if (!UserIsSignedIn)
+                        continue;
+                }
+
+                if (navigationLink.AdminOnly.HasValue && navigationLink.AdminOnly.Value)
+                {
+                    if (!UserIsAdmin)
+                        continue;
+                }
+
+                if (navigationLink.Children != null && navigationLink.Children.Any())
+                {
+                    if (navigationLink.Title == "Members")
+                    {
+                        if (UserHasSubscription)
+                        {
+                            var url = navigationLink.Children.First().Href;
+                            if (url != null)
+                            {
+                                <MudMenu Label="@navigationLink.Title" Variant="Variant.Text" Class="@($"{GetActiveClass(url)} nav-bar-dropdown")" Color="@(IsDarkMode ? Color.Tertiary : Color.Dark)" AnchorOrigin="Origin.BottomLeft" ActivationEvent="MouseEvent.MouseOver" EndIcon="@Icons.Material.Filled.ArrowDropDown">
+                                    @foreach (var child in navigationLink.Children)
+                                    {
+                                        var href = child.Children != null && child.Children.Any() ? child.Children.First().Href : child.Href;
+                                        <MudMenuItem Href="@href">@child.Title</MudMenuItem>
+                                    }
+                                </MudMenu>
+                            }
+                        }
+                        else
+                        {
+                            <MudLink Href="/account/subscription" Color="@(IsDarkMode ? Color.Tertiary : Color.Dark)" Underline="Underline.None" Typo="Typo.h6">
+                                Subscription
+                            </MudLink>
+                        }
+                    }
+                    else
+                    {
+                        var url = navigationLink.Children.First().Href;
+                        if (url != null)
+                        {
+                            <MudMenu Label="@navigationLink.Title" Variant="Variant.Text" Class="@($"{GetActiveClass(url)} nav-bar-dropdown")" Color="@(IsDarkMode ? Color.Tertiary : Color.Dark)" AnchorOrigin="Origin.BottomLeft" ActivationEvent="MouseEvent.MouseOver" EndIcon="@Icons.Material.Filled.ArrowDropDown">
+                                @foreach (var child in navigationLink.Children)
+                                {
+                                    var href = child.Children != null && child.Children.Any() ? child.Children.First().Href : child.Href;
+                                    <MudMenuItem Href="@href">@child.Title</MudMenuItem>
+                                }
+                            </MudMenu>
+                        }
+                    }
+                }
+                else
+                {
+                    if (navigationLink.Href != null)
+                    {
+                        <MudLink Href="@navigationLink.Href" Class="@(GetActiveClass(navigationLink.Href))" Color="@(IsDarkMode ? Color.Tertiary : Color.Dark)" Underline="Underline.None" Typo="Typo.h6">
+                            @navigationLink.Title
+                        </MudLink>
+                    }
+                }
+            }
+}
+
+@code {
+    [Parameter] public bool UserIsSignedIn { get; set; }
+    [Parameter] public bool UserIsAdmin { get; set; }
+    [Parameter] public bool UserHasSubscription { get; set; }
+    [Parameter] public bool IsDarkMode { get; set; }
+    [Parameter] public string? CurrentUrl { get; set; }
+    
+    private string GetActiveClass(string url)
+    {
+        var formattedUrl = url.Split("/");
+        var formattedCurrentUrl = CurrentUrl != null && CurrentUrl.Contains("/") ? CurrentUrl.Split("/")[0] : CurrentUrl;
+
+        return formattedCurrentUrl == formattedUrl[1] ? "active me-5" : "me-5";
+    }
+
+}

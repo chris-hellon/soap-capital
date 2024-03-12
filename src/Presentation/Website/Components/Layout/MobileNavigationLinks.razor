@@ -1,0 +1,74 @@
+@using SoapCapital.Infrastructure.Configuration
+@using Microsoft.Extensions.Options
+@inject IOptions<AppSettings> AppSettings
+
+@if (AppSettings.Value.NavigationLinks.Any())
+{
+    foreach (var navigationLink in AppSettings.Value.NavigationLinks)
+    {
+        if (navigationLink.RequiresAuth.HasValue && navigationLink.RequiresAuth.Value)
+        {
+            if (!UserIsSignedIn)
+                continue;
+        }
+    
+        if (navigationLink.AdminOnly.HasValue && navigationLink.AdminOnly.Value)
+        {
+            if (!UserIsAdmin)
+                continue;
+        }
+    
+        if (navigationLink.Children != null && navigationLink.Children.Any())
+        {
+            if (navigationLink.Title == "Members")
+            {
+                if (UserHasSubscription)
+                {
+                    <MudNavGroup Title="@navigationLink.Title">
+                        @foreach (var child in navigationLink.Children)
+                        {
+                            var href = child.Children != null && child.Children.Any() ? child.Children.First().Href : child.Href;
+                            <MudNavLink Href="@href">@child.Title</MudNavLink>
+                        }
+                    </MudNavGroup>
+                }
+                else
+                {
+                    <MudNavLink Href="/account/subscription" Match="NavLinkMatch.All">
+                        Subscription
+                    </MudNavLink>
+                }
+            }
+            else
+            {
+                <MudNavGroup Title="@navigationLink.Title" Expanded="@ShouldExpand($"/{@navigationLink.Title.ToLower().Replace(" ", "-")}")">
+                    @foreach (var child in navigationLink.Children)
+                    {
+                        var href = child.Children != null && child.Children.Any() ? child.Children.First().Href : child.Href;
+                        <MudNavLink Href="@href">@child.Title</MudNavLink>
+                    }
+                </MudNavGroup>
+            }
+        }
+        else
+        {
+            <MudNavLink Href="@navigationLink.Href" Match="NavLinkMatch.All">
+                @navigationLink.Title
+            </MudNavLink>
+        }
+    }
+}
+
+@code {
+    [Parameter] public bool UserIsSignedIn { get; set; }
+    [Parameter] public bool UserIsAdmin { get; set; }
+    [Parameter] public bool UserHasSubscription { get; set; }
+
+    private bool ShouldExpand(string prefix)
+    {
+        var path = (new Uri(NavigationManager.Uri)).PathAndQuery;
+        var prefixLowered = prefix.ToLower();
+
+        return path.StartsWith(prefixLowered);
+    }
+}

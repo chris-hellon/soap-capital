@@ -1,0 +1,101 @@
+@using SoapCapital.Infrastructure.Configuration
+@using Microsoft.Extensions.Options
+@using System.Security.Policy
+@using SoapCapital.Application.Catalog.Subscriptions.Dto
+
+@inject IOptions<AppSettings> AppSettings
+
+<footer class="mud-bg-black mud-text-white pt-8 pb-8">
+    <MudContainer>
+        <MudGrid>
+            <MudItem lg="4" xs="12">
+                <div class="d-flex justify-lg-start justify-center">
+                    <MudText Typo="Typo.h5" Class="mb-5">Quick links</MudText>
+                </div>
+                <div class="d-flex justify-lg-start justify-center text-lg-start text-center">
+                    @if (AppSettings.Value.FooterLinks.Any())
+                    {
+                        <ul>
+                            @foreach (var footerLink in AppSettings.Value.FooterLinks)
+                            {
+                                <li>
+                                    <MudLink Href="@footerLink.Href" Color="Color.Tertiary" Underline="Underline.None" Typo="Typo.h6">@footerLink.Title</MudLink>
+                                </li>
+                            }
+                        </ul>
+                    }
+                </div>
+            </MudItem>
+            <MudItem lg="4" xs="12">
+                <MudText Typo="Typo.h5" Class="mb-5" Align="Align.Center">Socials</MudText>
+                <div class="d-flex justify-center">
+                    @if (AppSettings.Value.SocialLinks.Any())
+                    {
+                        foreach (var socialLink in AppSettings.Value.SocialLinks)
+                        {
+                            var startIcon = socialLink.IconClass switch
+                            {
+                                "fa-twitter" => Icons.Custom.Brands.Twitter,
+                                "fa-youtube" => Icons.Custom.Brands.YouTube,
+                                "fa-substack" => CustomIcons.SubStack,
+                                "fa-discord" => Icons.Custom.Brands.Discord,
+                                _ => string.Empty
+                            };
+
+                            if (socialLink.IconClass == "fa-discord")
+                            {
+                                if (UserSubscription != null && UserSubscription.PackageId != 5)
+                                {
+                                    <MudFab Color="Color.Primary" Href="@socialLink.Url" StartIcon="@startIcon" Target="_blank" Size="Size.Small" Class="@($"{(socialLink != AppSettings.Value.SocialLinks.Last() ? "me-3" : "")}{(socialLink.IconClass == "fa-substack" ? "substack-icon" : "")}")"/>
+                                }
+                            }
+                            else
+                            {
+                                <MudFab Color="Color.Primary" Href="@socialLink.Url" StartIcon="@startIcon" Target="_blank" Size="Size.Small" Class="@($"{(socialLink != AppSettings.Value.SocialLinks.Last() ? "me-3" : "")}{(socialLink.IconClass == "fa-substack" ? "substack-icon" : "")}")"/>
+                            }
+                        }
+                    }
+                </div>
+            </MudItem>
+            <MudItem lg="4" xs="12">
+                <div class="d-flex justify-lg-end justify-center">
+                    <MudLink Href="https://www.opennode.com" Target="_blank" Style="width:31%;">
+                        <MudImage Src="https://paperstreetsoap.azureedge.net/site/open-node-logo-light.webp" Alt="Opennode footer logo" Height="50" Fluid="true"></MudImage>
+                    </MudLink>
+                </div>
+                <div class="d-flex justify-lg-end justify-center">
+                    <MudImage Src="https://paperstreetsoap.azureedge.net/site/mastercard-symbol-icon.png" Alt="Mastercard footer logo" Height="50"></MudImage>
+                    <MudImage Src="https://paperstreetsoap.azureedge.net/site/visa-symbol-icon.png" Alt="Visa footer logo" Height="50"></MudImage>
+                </div>
+            </MudItem>
+        </MudGrid>
+        <div class="d-flex align-start flex-row justify-lg-start justify-center">
+            <MudText Class="pt-8">© @DateTime.Now.Year Soap Capital Ltd.</MudText>
+        </div>
+    </MudContainer>
+</footer>
+
+@code {
+    private string? _currentUrl;
+
+    [Parameter] public bool IsDarkMode { get; set; }
+    [CascadingParameter]  public SubscriptionDto? UserSubscription { get; set; }
+
+    protected override void OnInitialized()
+    {
+        _currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+        NavigationManager.LocationChanged += OnLocationChanged;
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        _currentUrl = NavigationManager.ToBaseRelativePath(e.Location);
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= OnLocationChanged;
+    }
+
+}

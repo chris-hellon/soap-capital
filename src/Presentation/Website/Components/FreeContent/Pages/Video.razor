@@ -1,0 +1,99 @@
+@page "/free-content/{SubSection}/{Id:int}/{Title}"
+
+@using SoapCapital.Application.Catalog.Videos.Dto
+@using SoapCapital.Application.Catalog.Packages.Dto
+@using System.Globalization
+@using SoapCapital.Website.Components.Dialogs
+
+@inject IVideosService VideosService
+@inject IPackagesService PackagesService
+@inject ICurrentUser CurrentUser
+
+@attribute [StreamRendering]
+
+<PageHeaderTitle Title="@(VideoModel != null ? VideoModel.Title : "Loading")"/>
+
+<MudContainer Class="pt-8 pb-8" MaxWidth="MaxWidth.Large">
+    <MudGrid>
+        <MudItem lg="4" xs="12">
+            @if (VideoModel != null)
+            {
+                <MudText Typo="Typo.h2">@VideoModel.Title</MudText>
+                <MudText Typo="Typo.h5">@VideoModel.Date.ToLongDateString()</MudText>
+
+                <MudDivider Class="mt-5 mb-5"/>
+
+                @((MarkupString) VideoModel.Details)
+
+                @if (!CurrentUser.IsAuthenticated())
+                {
+                    <MudDivider Class="mt-5 mb-5"/>
+
+                    <MudText Typo="Typo.body2">Sign up now for unrestricted access to premium content.</MudText>
+
+                    if (Package != null)
+                    {
+                        <MudText Typo="Typo.body2"> Our <strong>@Package.Title</strong> package is now available at <strong>@Package.Price.ToString("C", CultureInfo.GetCultureInfo("en-US"))</strong> for <strong>@Package.Duration @(Package.DurationType)s</strong>.</MudText>
+                        <MudButton Href="/choose-membership" Color="Color.Primary" Class="mt-5" Variant="Variant.Filled" Size="Size.Small">Sign Up</MudButton>
+                    }
+                }
+            }
+            else
+            {
+                <MudSkeleton Height="75px" SkeletonType="SkeletonType.Rectangle"/>
+                <MudDivider Class="mt-5 mb-5"/>
+                <MudSkeleton Height="382px" SkeletonType="SkeletonType.Rectangle"/>
+            }
+        </MudItem>
+        <MudItem lg="8" xs="12">
+            @if (VideoModel != null)
+            {
+                <VideoPlayer Title="@VideoModel.Title" VideoUrl="@VideoModel.VideoUrl"/>
+            }
+            else
+            {
+                <MudSkeleton Height="500px" SkeletonType="SkeletonType.Rectangle"/>
+            }
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+@code {
+    [SupplyParameterFromQuery] [Parameter] public int Id { get; set; }
+
+    [SupplyParameterFromQuery] [Parameter] public string? Title { get; set; }
+
+    [SupplyParameterFromQuery] [Parameter] public string? SubSection { get; set; }
+
+    private VideoDto? VideoModel { get; set; }
+
+    private PackageDto? Package { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var video = Task.Run(() => VideosService.GetVideo(Id));
+        var package = Task.Run(() => PackagesService.GetPackage(3));
+
+        await Task.WhenAll(video, package);
+
+        VideoModel = video.Result;
+        Package = package.Result;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        if (!CurrentUser.IsAuthenticated())
+        {
+            await Task.Delay(5000);
+            
+            var parameters = new DialogParameters<SignUpDialog> { { x => x.Package, Package } };
+            var options = new DialogOptions() { Position = DialogPosition.BottomCenter, CloseButton = true, FullWidth = true, NoHeader = true };
+            
+            await DialogService.ShowAsync<SignUpDialog>("Sign Up", parameters, options);
+            
+            StateHasChanged();
+        }
+    }
+}

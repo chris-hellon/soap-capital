@@ -1,0 +1,25 @@
+﻿@using Microsoft.AspNetCore.Identity
+@using SoapCapital.Infrastructure.Identity
+@using System.Drawing
+
+@inject SignInManager<ApplicationUser> SignInManager
+
+<MudNavMenu Bordered="true">
+    <MudNavLink Href="/account/profile" Icon="@Icons.Material.Filled.Person">Profile</MudNavLink>
+    <MudNavLink Href="/account/email" Icon="@Icons.Material.Filled.Email">Email</MudNavLink>
+    <MudNavLink Href="/account/password" Icon="@Icons.Material.Filled.Password">Password</MudNavLink>
+    <MudNavLink Href="/account/subscription" Icon="@Icons.Material.Filled.Subscriptions">Subscription</MudNavLink>
+    <MudNavLink Href="/account/my-orders" Icon="@Icons.Material.Filled.Payments">My Orders</MudNavLink>
+    <MudNavLink Href="/account/two-factor-authentication" Icon="@Icons.Material.Filled.Security">Two-factor authentication</MudNavLink>
+    <MudNavLink Href="/account/personal-data" Icon="@Icons.Material.Filled.Dataset">Personal data</MudNavLink>
+</MudNavMenu>
+
+@code {
+    private bool hasExternalLogins;
+
+    protected override async Task OnInitializedAsync()
+    {
+        hasExternalLogins = (await SignInManager.GetExternalAuthenticationSchemesAsync()).Any();
+    }
+
+}

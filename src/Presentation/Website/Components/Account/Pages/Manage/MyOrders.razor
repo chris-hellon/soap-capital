@@ -1,0 +1,43 @@
+@page "/account/my-orders"
+@using SoapCapital.Application.Catalog.Orders.Dto
+@using SoapCapital.Application.Catalog.Orders.Queries
+
+@inject IOrdersService OrdersService
+@inject ICurrentUser CurrentUser
+
+<SectionContent SectionName="PageHeaderTitle">
+    <PageHeaderTitle Title="My Orders"/>
+</SectionContent>
+
+@if (UserOrders.Any())
+{
+    <MudGrid>
+        @foreach (var order in UserOrders)
+        {
+            <MudItem lg="6" xs="12">
+                <MudCard Class="h-100">
+                    <MudCardContent>
+                        <MudText>@order.PackageName</MudText>
+                        <MudText Typo="Typo.body2">Order Date: @order.CreateDate.ToShortDateString()</MudText>
+                    </MudCardContent>
+                    <MudCardActions>
+                        @if (!order.OrderConfirmed)
+                        {
+                            <MudButton Href="@($"/account/my-orders/order-status/{order.Id}{(order.UpgradeSubscriptionId.HasValue ? $"/{order.UpgradeSubscriptionId.Value}" : "")}")" Size="Size.Small" Color="Color.Primary" IconClass="@Icons.Material.Filled.OpenInNew" IconColor="Color.Primary">Check Order Status</MudButton>   
+                        }
+                    </MudCardActions>
+                </MudCard>
+            </MudItem>
+        }
+    </MudGrid>
+}
+
+@code {
+    private IEnumerable<OrderDto> UserOrders { get; set; } = Enumerable.Empty<OrderDto>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        UserOrders = await OrdersService.GetUserOrders(new GetUserOrdersRequest(CurrentUser.GetUserId().ToString()));
+    }
+
+}

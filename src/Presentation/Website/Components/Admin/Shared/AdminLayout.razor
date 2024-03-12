@@ -1,0 +1,71 @@
+@using SoapCapital.Infrastructure.Configuration
+@using Microsoft.Extensions.Options
+
+@inherits LayoutComponentBase
+@layout MainLayout
+
+@inject IOptions<AppSettings> AppSettings
+
+<SectionOutlet SectionName="PageHeaderTitle"/>
+
+<MudContainer Class="pt-8 pb-8">
+    <MudGrid>
+        <MudItem lg="3" xs="12">
+            <MudNavMenu Bordered="true">
+                @foreach (var navigationLink in AppSettings.Value.NavigationLinks)
+                {
+                    if (string.IsNullOrEmpty(navigationLink.Area) || navigationLink.Area != "Admin")
+                        continue;
+
+                    if (navigationLink.Children == null)
+                    {
+                        continue;
+                    }
+
+                    foreach (var childNavigationLink in navigationLink.Children)
+                    {
+                        var icon = childNavigationLink.Title switch
+                        {
+                            "Dashboard" => Icons.Material.Filled.Dashboard,
+                            "Videos" => Icons.Material.Filled.VideoLibrary,
+                            "Charts" => Icons.Material.Filled.CandlestickChart,
+                            "Packages" => Icons.Material.Filled.MiscellaneousServices,
+                            "Users" => Icons.Material.Filled.Person,
+                            "Orders" => Icons.Material.Filled.Payments,
+                            "Pages" => Icons.Material.Filled.Pageview,
+                            "Live Trading" => Icons.Material.Filled.LiveTv,
+                            _ => string.Empty
+                        };
+
+                        if (childNavigationLink.Children != null && childNavigationLink.Children.Any())
+                        {
+                            <MudNavGroup Title="@childNavigationLink.Title" Icon="@icon" Expanded="@ShouldExpand($"/admin/{childNavigationLink.Title.Replace(" ", "-").Replace(" ", "")}")">
+                                @foreach (var subChildNavigationLink in childNavigationLink.Children)
+                                {
+                                    <MudNavLink Href="@subChildNavigationLink.Href">@subChildNavigationLink.Title</MudNavLink>
+                                }
+                            </MudNavGroup>
+                        }
+                        else
+                        {
+                            <MudNavLink Href="@childNavigationLink.Href" Icon="@icon">@childNavigationLink.Title</MudNavLink>
+                        }
+                    }
+                }
+            </MudNavMenu>
+        </MudItem>
+        <MudItem lg="9" xs="12">
+            @Body
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+@code {
+    private bool ShouldExpand(string prefix)
+    {
+        var path = (new Uri(NavigationManager.Uri)).PathAndQuery;
+        var prefixLowered = prefix.ToLower();
+
+        return path.StartsWith(prefixLowered);
+    }
+}

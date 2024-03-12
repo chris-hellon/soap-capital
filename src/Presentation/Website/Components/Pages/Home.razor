@@ -1,0 +1,161 @@
+﻿@page "/"
+
+@using SoapCapital.Application.Catalog.Charts.Queries
+@using SoapCapital.Application.Catalog.Charts.Dto
+
+@attribute [StreamRendering]
+
+@inject IChartsService ChartsService
+@inject PersistentComponentState ApplicationState
+
+@implements IDisposable
+
+<PageTitle>Soap Capital</PageTitle>
+
+<HeadContent>
+    <meta name="keywords" content="@($"soap capital,trading,cryptocurrency,crypto,cryptocurrency trading,bitcoin,ethereum,tyler durden,stocks,markets")"/>
+    <meta name="description" content="The first rule of Soap Capital is: you do not talk about Soap Capital..."/>
+    <meta property="og:description" content="The first rule of Soap Capital is: you do not talk about Soap Capital..."/>
+    <link rel="canonical" href="@NavigationManager.Uri">
+    <meta property="og:url" content="@NavigationManager.Uri"/>
+    <meta property="twitter:url" content="@NavigationManager.Uri"/>
+    <meta property="og:title" content="@($"Soap Capital")"/>
+    <meta property="twitter:title" content="@($"Soap Capital")"/>
+</HeadContent>
+
+<SectionContent SectionName="Banner">
+    <FullPageBanner Title="Soap Capital" HiddenTitle="true" ImageUrl="https://paperstreetsoap.azureedge.net/site/logo.png"></FullPageBanner>
+</SectionContent>
+
+<MudContainer Class="pt-10 pb-10 has-parallax-scroll" MaxWidth="MaxWidth.Medium">
+    <div class="d-flex flex-column justify-center h-100">
+        <MudText Typo="Typo.body1" Align="Align.Center" Class="mb-5">
+           We all know what the first rule of Soap Capital is but in case you need a reminder -
+        </MudText>
+        <MudText Align="Align.Center" Class="mb-5">
+            The first rule of Soap Capital is: you do not talk about Soap Capital...
+        </MudText>
+        <MudText Align="Align.Center" Class="mb-5">
+            -
+        </MudText>
+        <MudText Align="Align.Center" Class="mb-5">
+            Now that we have that settled.. what else do we do here?
+        </MudText>
+        <MudText Align="Align.Center" Style="font-weight: bold">
+            We trade Bitcoin & Crypto. Everyday. Live.
+        </MudText>
+    </div>
+</MudContainer>
+
+<MudContainer Class="pt-8 pb-8" MaxWidth="MaxWidth.Medium">
+    <ContentTitle Title="About" Class="has-parallax-scroll"></ContentTitle>
+    <MudGrid>
+        <MudItem lg="4" sm="12">
+            <MudPaper Elevation="3" Class="pa-8 h-100 has-parallax-scroll">
+                <MudText Typo="Typo.h5" Align="Align.Center" Class="mb-5">Knowledge</MudText>
+                <MudText Align="Align.Center" Class="mb-5">
+                    Learn the time based price action concepts I use to trade crypto markets.
+                </MudText>
+                <MudText Align="Align.Center" Class="mb-5">
+                    From beginner to pro, and from concepts to complete actionable strategies.
+                </MudText>
+                <MudText Align="Align.Center" Style="font-weight: bold; font-style: italic;">
+                    "You wanna make an omelette, you gotta break some eggs."
+                </MudText>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem lg="4" sm="12">
+            <MudPaper Elevation="3" Class="pa-8 h-100 has-parallax-scroll">
+                <MudText Typo="Typo.h5" Align="Align.Center" Class="mb-5">Discipline</MudText>
+                <MudText Align="Align.Center" Class="mb-5">
+                    You will be guided through the markets daily. Learning how to read the tape, understand the price action meta game and see the discipline required to be consistently profitable.
+                </MudText>
+                <MudText Align="Align.Center" Style="font-weight: bold; font-style: italic;">
+                    "Without pain, without sacrifice we would have nothing. Like the first monkey shot into space.."
+                </MudText>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem lg="4" sm="12">
+            <MudPaper Elevation="3" Class="pa-8 h-100 has-parallax-scroll">
+                <MudText Typo="Typo.h5" Align="Align.Center" Class="mb-5">Execution</MudText>
+                <MudText Align="Align.Center" Class="mb-5">
+                    There is no better teacher than trading live. You will learn to build a trade - from bias forming, identifying value, context, price patterns, entry and exit to post-trade journalling.
+                </MudText>
+                <MudText Align="Align.Center" Class="mb-5">
+                    Live and in real time with Tyler.
+                </MudText>
+                <MudText Align="Align.Center" Style="font-weight: bold; font-style: italic;">
+                    "No fear. No distractions."
+                </MudText>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+<MudContainer Class="pt-8 pb-8" MaxWidth="MaxWidth.Medium">
+    <ContentTitle Title="Live Trades" Class="has-parallax-scroll"></ContentTitle>
+    <MudGrid>
+        @if (Charts != null)
+        {
+            foreach (var chart in Charts)
+            {
+                <MudItem lg="4" xs="12">
+                    <MudCard Elevation="3" Class="pb-0 has-parallax-scroll">
+                        <MudCardHeader>
+                            <CardHeaderContent>
+                                <MudText Typo="Typo.h6">@chart.Title</MudText>
+                                <MudText Typo="Typo.body2">@chart.Date.ToShortDateString()</MudText>
+                            </CardHeaderContent>
+                            <CardHeaderActions>
+                                <MudIconButton Icon="@Icons.Material.Filled.OpenInNew" Color="Color.Default" Href="@chart.ImageUrl" Target="_blank"/>
+                            </CardHeaderActions>
+                        </MudCardHeader>
+                        <MudCardContent Class="pa-0">
+                            <MudImage ObjectFit="ObjectFit.Cover" Src="@chart.ImageUrl" Height="300" loading="lazy" Alt="@($"{chart.Title} grid image")" Class="w-100 mb-n5 rounded-b"></MudImage>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+            }
+        }
+        else
+        {
+            <CardsSkeletons/>
+        }
+    </MudGrid>
+</MudContainer>
+
+<MudContainer Class="pt-8 pb-8 has-parallax-scroll" MaxWidth="MaxWidth.Medium" UserAttributes="@(new Dictionary<string, object?>() {{"id", "welcomeVideo"}})">
+    <ContentTitle Title="Welcome Video"></ContentTitle>
+     <VideoPlayer Title="Welcome Video" VideoUrl="https://player.vimeo.com/video/743682785?title=0&byline=0&portrait=0" Padding="56.25% 0 0"></VideoPlayer>
+</MudContainer>
+
+@code {
+    private IEnumerable<ChartDto>? Charts { get; set; }
+
+    private PersistingComponentStateSubscription _subscription;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        _subscription = ApplicationState.RegisterOnPersisting(Persist);
+        
+        var foundInState = ApplicationState
+            .TryTakeFromJson<IEnumerable<ChartDto>?>("charts", out var charts);
+        
+        Charts = (foundInState
+            ? charts
+            : await ChartsService.GetCharts(new GetChartsRequest(6))) ?? null;
+    }
+    
+    private Task Persist()
+    {
+        ApplicationState.PersistAsJson("charts", Charts);
+        return Task.CompletedTask;
+    }
+    
+    public void Dispose()
+    {
+        _subscription.Dispose();
+    }
+}

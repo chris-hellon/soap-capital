@@ -1,0 +1,174 @@
+@page "/choose-membership/{UserAction?}"
+@using SoapCapital.Application.Catalog.Packages.Dto
+@using SoapCapital.Application.Catalog.Packages.Queries
+@using System.Globalization
+@using HtmlAgilityPack
+@using SoapCapital.Website.Components.Dialogs
+
+@attribute [StreamRendering]
+
+@inject IPackagesService PackagesService
+@inject PersistentComponentState ApplicationState
+
+@implements IDisposable
+
+<PageHeaderTitle Title="Choose a Package"/>
+<MudContainer Class="pt-8 pb-8">
+    <MudGrid Class="d-flex justify-center">
+        @if (Packages.Any())
+        {
+            foreach (var package in Packages)
+            {
+                <MudItem xs="12" sm="6" md="4">
+                    <MudCard Elevation="25" Class="rounded-lg pb-4 h-100">
+                        <MudCardHeader>
+                            <CardHeaderContent>
+                                <MudText Typo="Typo.h2" Align="Align.Center">@package.Title</MudText>
+
+                                <div class="d-flex justify-center flex-column align-center">
+                                    <MudText Typo="Typo.h4">@package.Price.ToString("C", CultureInfo.GetCultureInfo("en-US"))</MudText>
+                                    <MudText Typo="Typo.h6" Class="ml-1"> for @package.Duration @($"{package.DurationType}{(package.Duration > 1 ? "s" : "")}") access</MudText>
+                                </div>
+                            </CardHeaderContent>
+                        </MudCardHeader>
+                        <MudCardActions Class="d-flex justify-center mt-5">
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="async () => await GetPackagePaymentMethods(package)">@($"Get {package.Title}")</MudButton>
+                        </MudCardActions>
+                        <MudCardContent>
+                            <MudList Class="mx-auto">
+                                @{
+                                    <MudListItem>
+                                        What's Included?
+                                    </MudListItem>
+                                    
+                                    if (package.Description != null)
+                                    {
+                                        var liElements = ExtractLiElements(package.Description);
+
+                                        if (liElements.Any())
+                                        {
+                                            foreach (var liElement in liElements)
+                                            {
+                                                <MudListItem Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                                                    @((MarkupString) @liElement)
+                                                </MudListItem>
+                                            }
+                                        }
+                                    }
+                                }
+                            </MudList>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+            }
+        }
+        else
+        {
+            <MudItem xs="12" sm="6" md="4">
+                <MudCard>
+                    <MudCardHeader>
+                        <CardHeaderAvatar>
+                            <MudSkeleton SkeletonType="SkeletonType.Circle" Animation="Animation.Wave" Height="40px" Width="40px"/>
+                        </CardHeaderAvatar>
+                        <CardHeaderContent>
+                            <MudSkeleton Animation="Animation.Wave" Width="40%" />
+                            <MudSkeleton Animation="Animation.Wave" Width="60%" />
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudSkeleton SkeletonType="SkeletonType.Rectangle" Animation="Animation.Wave" Height="450px" />
+                    <MudCardContent>
+                        <MudSkeleton Animation="Animation.Wave" />
+                    </MudCardContent>
+                    <MudCardActions>
+                        <MudSkeleton SkeletonType="SkeletonType.Circle" Animation="Animation.Wave" Height="30px" Width="30px" Class="ml-2 mb-2" />
+                        <MudSkeleton SkeletonType="SkeletonType.Circle" Animation="Animation.Wave" Height="30px" Width="30px" Class="ml-3 mb-2" />
+                    </MudCardActions>
+                </MudCard>
+
+            </MudItem>
+            <MudItem xs="12" sm="6" md="4">
+                <MudCard>
+                    <MudCardHeader>
+                        <CardHeaderAvatar>
+                            <MudSkeleton SkeletonType="SkeletonType.Circle" Animation="Animation.Wave" Height="40px" Width="40px"/>
+                        </CardHeaderAvatar>
+                        <CardHeaderContent>
+                            <MudSkeleton Animation="Animation.Wave" Width="40%" />
+                            <MudSkeleton Animation="Animation.Wave" Width="60%" />
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudSkeleton SkeletonType="SkeletonType.Rectangle" Animation="Animation.Wave" Height="450px" />
+                    <MudCardContent>
+                        <MudSkeleton Animation="Animation.Wave" />
+                    </MudCardContent>
+                    <MudCardActions>
+                        <MudSkeleton SkeletonType="SkeletonType.Circle" Animation="Animation.Wave" Height="30px" Width="30px" Class="ml-2 mb-2" />
+                        <MudSkeleton SkeletonType="SkeletonType.Circle" Animation="Animation.Wave" Height="30px" Width="30px" Class="ml-3 mb-2" />
+                    </MudCardActions>
+                </MudCard>
+            </MudItem>
+        }
+    </MudGrid>
+</MudContainer>
+
+@code {
+    [SupplyParameterFromQuery] [Parameter] public string? UserAction { get; set; }
+    
+    private IEnumerable<PackageDto> Packages { get; set; } = Enumerable.Empty<PackageDto>();
+    private PersistingComponentStateSubscription _subscription;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        _subscription = ApplicationState.RegisterOnPersisting(Persist);
+        
+        var foundInState = ApplicationState
+            .TryTakeFromJson<IEnumerable<PackageDto>>("packages", out var packages);
+        
+        Packages = (foundInState
+            ? packages
+            : await PackagesService.GetPackages(new GetPackagesRequest(false))) ?? Array.Empty<PackageDto>();
+    }
+
+    private Task Persist()
+    {
+        ApplicationState.PersistAsJson("packages", Packages);
+        return Task.CompletedTask;
+    }
+    
+    private List<string> ExtractLiElements(string htmlString)
+    {
+        var liElements = new List<string>();
+
+        // Create an HTML document
+        var htmlDocument = new HtmlAgilityPack.HtmlDocument();
+        htmlDocument.LoadHtml(htmlString);
+
+        // Find all <ul> elements
+        var ulElements = htmlDocument.DocumentNode.SelectNodes("//ul");
+
+        if (ulElements == null) return liElements;
+        
+        // Iterate through each <ul> element
+        liElements.AddRange(from liNodes in ulElements.Select(ulElement => ulElement.SelectNodes(".//li")).OfType<HtmlNodeCollection>() from liNode in liNodes select liNode.InnerHtml);
+
+        return liElements;
+    }
+
+    private async Task GetPackagePaymentMethods(PackageDto packageDto)
+    {
+        var options = new DialogOptions {CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true, DisableBackdropClick = true};
+
+        var parameters = new DialogParameters()
+        {
+            {nameof(PaymentTypeConfirmation.Package), packageDto},
+            {nameof(PaymentTypeConfirmation.IsUpgrade), UserAction is "upgrade"}
+        };
+        
+        await DialogService.ShowAsync<PaymentTypeConfirmation>(string.Empty, parameters, options);
+    }
+
+    public void Dispose()
+    {
+        _subscription.Dispose();
+    }
+}

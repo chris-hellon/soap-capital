@@ -1,0 +1,26 @@
+@page "/members/resources"
+@inherits VideosEntityTablePage
+
+@using SoapCapital.Application.Catalog.Videos.Queries
+@using SoapCapital.Application.Catalog.Videos.Dto
+
+@inject IVideosService VideosService
+
+<SectionContent SectionName="PageHeaderTitle">  
+    <PageHeaderTitle Title="Resources"></PageHeaderTitle>
+</SectionContent>
+
+
+<EntityTable TEntity="VideoDto" EntityList="TableEntities" Fields="TableFields" SearchFunc="SearchVideos" Loading="Loading"/>
+
+@code {
+    protected override string SubSection => "resources";
+    protected override string Section => "members";
+    
+    protected override async Task<Task> OnInitializedAsync()
+    {
+        TableEntities = await VideosService.GetVideos(new GetResourcesVideosRequest());
+
+        return base.OnInitializedAsync();
+    }
+}

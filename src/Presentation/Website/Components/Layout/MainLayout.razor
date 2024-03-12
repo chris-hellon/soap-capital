@@ -1,0 +1,86 @@
+﻿@using SoapCapital.Application.Catalog.Subscriptions.Dto
+@using SoapCapital.Application.Catalog.Subscriptions.Queries
+@using SoapCapital.Shared.Authorization
+@using SoapCapital.Website.Components.Pages
+
+@inherits LayoutComponentBase
+
+@attribute [StreamRendering]
+
+@inject ISubscriptionsService SubscriptionsService
+
+<MudThemeProvider Theme="_currentTheme"/>
+<MudDialogProvider/>
+<MudSnackbarProvider/>
+
+<MudOverlay Visible="@LoadingService.LoaderVisible" DarkBackground="true" Absolute="false" Style="z-index: 40000000000">
+    <MudProgressCircular Color="Color.Primary" Indeterminate="true"/>
+</MudOverlay>
+
+<MudLayout>
+    <CascadingValue Value="UserSubscription">
+        <div class="wrapper">
+            <NavMenu ToggleDarkMode="ToggleDarkMode" IsDarkMode="_isDarkMode"></NavMenu>
+
+            <SectionOutlet SectionName="Banner"/>
+
+            <MudMainContent Style="@(NavbarService.IsTransparent ? "padding-top:0px;" : "")">
+                @Body
+
+                <MudScrollToTop Style="z-index:2000;" ScrollBehavior="ScrollBehavior.Smooth">
+                    <MudFab Icon="@Icons.Material.Filled.KeyboardArrowUp" Color="Color.Primary"/>
+                </MudScrollToTop>
+            </MudMainContent>
+
+            <div class="push"></div>
+        </div>
+
+        <Footer IsDarkMode="@_isDarkMode"></Footer>
+    </CascadingValue>
+</MudLayout>
+
+@code {
+    private bool _isDarkMode = true;
+
+    private MudTheme _currentTheme = new DarkTheme();
+
+    private SubscriptionDto? UserSubscription { get; set; }
+
+    private bool FetchingSubscription { get; set; } = true;
+
+    protected override void OnInitialized()
+    {
+        LoadingService.OnLoaderVisibilityChanged += Reload;
+        InteractiveSubmittingService.OnBusySubmittingChanged += Reload;
+        NavbarService.OnNavbarTransparencyChanged += Reload;
+
+        var currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+        NavbarService.ToggleNavbarTransparency(currentUrl == "");
+
+        var authState = AuthState.GetAuthenticationStateAsync();
+
+        if (authState.Result.User.Identity is {IsAuthenticated: true})
+        {
+            var userId = authState.Result.User.GetUserId();
+            var userSubscription = Task.Run(() => SubscriptionsService.GetUserSubscription(new GetUserSubscriptionRequest(userId)));
+
+            UserSubscription = userSubscription.Result;
+        }
+
+        FetchingSubscription = false;
+    }
+
+    private Task Reload()
+    {
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    public void ToggleDarkMode(bool toggled)
+    {
+        _isDarkMode = toggled;
+        _currentTheme = _isDarkMode ? new DarkTheme() : new LightTheme();
+        ChartsThemeService.ToggleChartsDarkMode(toggled);
+    }
+
+}

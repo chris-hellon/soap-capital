@@ -1,0 +1,145 @@
+﻿@page "/account/email"
+
+@using System.ComponentModel.DataAnnotations
+@using System.Text
+@using System.Text.Encodings.Web
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.WebUtilities
+@using SoapCapital.Application.Mailing
+@using SoapCapital.Infrastructure.Identity
+
+@inject UserManager<ApplicationUser> UserManager
+@inject IMailService MailService
+@inject IdentityUserAccessor UserAccessor
+@inject NavigationManager NavigationManager
+
+<SectionContent SectionName="PageHeaderTitle">
+    <PageHeaderTitle Title="Email"/>
+</SectionContent>
+
+
+<form @onsubmit="OnSendEmailVerificationAsync" @formname="send-verification" id="send-verification-form" method="post">
+    <AntiforgeryToken/>
+</form>
+
+<EditForm Model="Input" FormName="change-email" OnValidSubmit="OnValidSubmitAsync" method="post">
+    <MudGrid Spacing="1">
+        <DataAnnotationsValidator/>
+        <StatusMessage Message="@message"/>
+
+        <MudItem xs="12">
+            <div class="mud-input-control mud-input-input-control">
+                <div class="mud-input-control-input-container">
+                    <div class="mud-input mud-input-text  mud-input-outlined mud-shrink">
+                        <InputText @bind-Value="@email" disabled="true" class="mud-input-slot mud-input-root mud-input-root-outlined" autocomplete="username" aria-required="true" placeholder="Email"/>
+                        <div class="mud-input-outlined-border"></div>
+                    </div>
+                    <label class="mud-input-label mud-input-label-animated mud-input-label-text mud-input-label-inputcontrol" for="@email">Email</label>
+                </div>
+            </div>
+        </MudItem>
+
+        <MudItem xs="12">
+            <div class="mud-input-control mud-input-input-control">
+                <div class="mud-input-control-input-container">
+                    <div class="mud-input mud-input-text  mud-input-outlined mud-shrink">
+                        <InputText @bind-Value="@Input.NewEmail" class="mud-input-slot mud-input-root mud-input-root-outlined" autocomplete="username" aria-required="true" placeholder="Email"/>
+                        <div class="mud-input-outlined-border"></div>
+                    </div>
+                    <label class="mud-input-label mud-input-label-animated mud-input-label-text mud-input-label-inputcontrol" for="@Input.NewEmail">New Email</label>
+                </div>
+            </div>
+        </MudItem>
+        
+        <MudItem xs="12" Class="d-flex justify-center">
+            <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large" StartIcon="@Icons.Material.Filled.Login" Style="width: 100%;">
+                Change email
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+
+
+</EditForm>
+
+@code {
+    private string? message;
+    private ApplicationUser user = default!;
+    private string? email;
+    private bool isEmailConfirmed;
+
+    [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
+
+    [SupplyParameterFromForm(FormName = "change-email")]
+    private InputModel Input { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        user = await UserAccessor.GetRequiredUserAsync(HttpContext);
+        email = await UserManager.GetEmailAsync(user);
+        isEmailConfirmed = await UserManager.IsEmailConfirmedAsync(user);
+
+        Input.NewEmail ??= email;
+    }
+
+    private async Task OnValidSubmitAsync()
+    {
+        if (Input.NewEmail is null || Input.NewEmail == email)
+        {
+            message = "Your email is unchanged.";
+            return;
+        }
+
+        var userId = await UserManager.GetUserIdAsync(user);
+        var code = await UserManager.GenerateChangeEmailTokenAsync(user, Input.NewEmail);
+        code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+        var callbackUrl = NavigationManager.GetUriWithQueryParameters(
+            NavigationManager.ToAbsoluteUri("Account/ConfirmEmailChange").AbsoluteUri,
+            new Dictionary<string, object?> {["userId"] = userId, ["email"] = Input.NewEmail, ["code"] = code});
+        
+        if (user.Email != null)
+        {
+            var mailRequest = new MailRequest(
+                to: [user.Email],
+                subject: "Confirm Email Change",
+                body: $"Please confirm your account by <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>clicking here</a>.");
+
+            await MailService.SendAsync(mailRequest);
+            message = "Confirmation link to change email sent. Please check your email.";
+        }
+    }
+
+    private async Task OnSendEmailVerificationAsync()
+    {
+        if (email is null)
+        {
+            return;
+        }
+
+        var userId = await UserManager.GetUserIdAsync(user);
+        var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
+        code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+        var callbackUrl = NavigationManager.GetUriWithQueryParameters(
+            NavigationManager.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
+            new Dictionary<string, object?> {["userId"] = userId, ["code"] = code});
+
+        if (user.Email != null)
+        {
+            var mailRequest = new MailRequest(
+                to: [user.Email],
+                subject: "Confirm Email Change",
+                body: $"Please confirm your account by <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>clicking here</a>.");
+
+            await MailService.SendAsync(mailRequest);
+            message = "Verification email sent. Please check your email.";
+        }
+    }
+
+    private sealed class InputModel
+    {
+        [Required]
+        [EmailAddress]
+        [Display(Name = "New email")]
+        public string? NewEmail { get; set; }
+    }
+
+}

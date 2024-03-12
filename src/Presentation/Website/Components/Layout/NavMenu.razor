@@ -1,0 +1,176 @@
+﻿@using SoapCapital.Infrastructure.Configuration
+@using Microsoft.Extensions.Options
+@using SoapCapital.Application.Catalog.Notifications.Commands
+@using SoapCapital.Application.Catalog.Notifications.Dto
+@using SoapCapital.Application.Catalog.Notifications.Queries
+@using SoapCapital.Application.Catalog.Subscriptions.Dto
+@using SoapCapital.Application.Catalog.Subscriptions.Queries
+
+@implements IDisposable
+
+@attribute [StreamRendering]
+
+@inject PersistentComponentState ApplicationState
+@inject NavigationManager NavigationManager
+@inject IOptions<AppSettings> AppSettings
+@inject INotificationsService NotificationsService
+
+
+@if (AppSettings.Value.NavigationLinks.Any())
+{
+    var userIsSignedIn = CurrentUser.IsAuthenticated();
+    var userIsAdmin = CurrentUser.IsInRole("Admin");
+    var userHasSubscription = UserSubscription != null;
+
+    <MudAppBar Elevation="25" Fixed="true" Class="@(NavbarService.IsTransparent ? "transparent-app-bar" : "no-transparency")">
+        <div class="d-flex align-center flex-grow-1 d-md-none">
+            <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" Title="Toggle Drawer" OnClick="@ToggleDrawer"/>
+            <MudSpacer/>
+            <MudButton Href="/" Class="navbarBrand">
+                <MudImage Height="50" Src="https://paperstreetsoap.azureedge.net/site/logo.png" Alt="Soap Capital navbar brand"></MudImage>
+            </MudButton>
+        </div>
+        <div class="d-none d-md-flex align-center flex-grow-1">
+            <MudButton Href="/" Class="navbarBrand me-5">
+                <MudImage Height="50" Src="https://paperstreetsoap.azureedge.net/site/logo.png" Alt="Soap Capital navbar brand"></MudImage>
+            </MudButton>
+            <MudTooltip Text="Toggle Dark Mode">
+                <MudToggleIconButton Class="me-2 dark-mode-toggle" Toggled="@IsDarkMode" ToggledChanged="ToggleDarkMode"
+                                     Icon="@Icons.Material.Filled.DarkMode" Color="Color.Dark" Title="Off"
+                                     ToggledIcon="@Icons.Material.Filled.LightMode" ToggledColor="@Color.Tertiary" ToggledTitle="On"/>
+            </MudTooltip>
+
+            <DesktopNavigationLinks CurrentUrl="@_currentUrl" IsDarkMode="IsDarkMode" UserHasSubscription="userHasSubscription" UserIsAdmin="userIsAdmin" UserIsSignedIn="userIsSignedIn"></DesktopNavigationLinks>
+            
+            <MudSpacer/>
+
+            <NavMenuSocialLinks IsDarkMode="IsDarkMode" UserIsSignedIn="userIsSignedIn" UserSubscription="UserSubscription"></NavMenuSocialLinks>
+
+            <AuthorizeView>
+                <Authorized>
+                    <UserNotifications Notifications="Notifications" GetUserNotifications="GetUserNotifications" IsDarkMode="IsDarkMode"></UserNotifications>
+                </Authorized>
+                <NotAuthorized>
+                    <MudButton Href="/login" Class="me-5 ms-5" Variant="Variant.Filled" Color="Color.Secondary">Log In</MudButton>
+                    <MudButton Href="/choose-membership" Variant="Variant.Filled" Color="Color.Primary">Sign Up</MudButton>
+                </NotAuthorized>
+            </AuthorizeView>
+            <AuthorizeView>
+                <Authorized>
+                    <UserCard IsDarkMode="IsDarkMode"></UserCard>
+                </Authorized>
+            </AuthorizeView>
+        </div>
+    </MudAppBar>
+    <MudDrawer @bind-Open="@IsDrawerOpen" Elevation="1">
+        <MudNavMenu>
+            <div class="d-block d-md-none">
+                <MudToolBar>
+                    <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" OnClick="ToggleDrawer" Color="@(IsDarkMode ? Color.Tertiary : Color.Dark)"/>
+
+                    <MudSpacer></MudSpacer>
+
+                    <MudToggleIconButton Class="me-2 dark-mode-toggle" Toggled="@IsDarkMode" ToggledChanged="ToggleDarkMode"
+                                         Icon="@Icons.Material.Filled.DarkMode" Color="Color.Dark" Title="Off"
+                                         ToggledIcon="@Icons.Material.Filled.LightMode" ToggledColor="@Color.Tertiary" ToggledTitle="On"/>
+
+                    <NavMenuSocialLinks IsDarkMode="IsDarkMode" UserIsSignedIn="userIsSignedIn" UserSubscription="UserSubscription"></NavMenuSocialLinks>
+
+                    <AuthorizeView>
+                        <Authorized>
+                            <UserNotifications Notifications="Notifications" GetUserNotifications="GetUserNotifications" IsDarkMode="IsDarkMode"></UserNotifications>
+                            <UserCard IsDarkMode="IsDarkMode"></UserCard>
+                        </Authorized>
+                    </AuthorizeView>
+                </MudToolBar>
+            </div>
+
+            <MobileNavigationLinks UserIsAdmin="userIsAdmin" UserHasSubscription="userHasSubscription" UserIsSignedIn="userIsSignedIn"></MobileNavigationLinks>
+
+            <AuthorizeView>
+                <NotAuthorized>
+                    <MudNavLink Href="/login">Log In</MudNavLink>
+                    <MudNavLink Href="/choose-membership">Sign Up</MudNavLink>
+                </NotAuthorized>
+            </AuthorizeView>
+        </MudNavMenu>
+    </MudDrawer>
+}
+
+@code {
+    private string? _currentUrl;
+
+    private bool IsDrawerOpen { get; set; }
+
+    [Parameter] public bool IsDarkMode { get; set; }
+    [Parameter] public EventCallback<bool> ToggleDarkMode { get; set; }
+    [CascadingParameter] public SubscriptionDto? UserSubscription { get; set; }
+
+    private IEnumerable<NotificationDto> Notifications { get; set; } = Enumerable.Empty<NotificationDto>();
+
+    private PersistingComponentStateSubscription _subscription;
+
+    protected override void OnInitialized()
+    {
+        SetCurrentUser();
+        
+        _currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+        NavigationManager.LocationChanged += OnLocationChanged;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await GetUserNotifications();
+    }
+
+    private async Task GetUserNotifications()
+    {
+        if (CurrentUser.IsAuthenticated())
+        {
+            _subscription = ApplicationState.RegisterOnPersisting(Persist);
+
+            var foundInState = ApplicationState
+                .TryTakeFromJson<IEnumerable<NotificationDto>?>("notifications", out var notifications);
+
+            Notifications = (foundInState
+                ? notifications
+                : await NotificationsService.GetUserNotifications(new GetUserNotificationsRequest(CurrentUser.GetUserId().ToString()))) ?? Enumerable.Empty<NotificationDto>();
+        }
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        _currentUrl = NavigationManager.ToBaseRelativePath(e.Location);
+
+        NavbarService.ToggleNavbarTransparency(_currentUrl == "");
+        //MetadataTransferService.UpdateMetadata(sender, e);
+
+        SetCurrentUser();
+        Task.Run(GetUserNotifications);
+        
+        StateHasChanged();
+    }
+
+    private void SetCurrentUser()
+    {
+        var currentUser = AuthState.GetAuthenticationStateAsync().Result;
+        CurrentUserInitializer.SetCurrentUser(currentUser.User);
+    }
+
+    private void ToggleDrawer()
+    {
+        IsDrawerOpen = !IsDrawerOpen;
+    }
+
+    private Task Persist()
+    {
+        ApplicationState.PersistAsJson("notifications", Notifications);
+        return Task.CompletedTask;
+    }
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= OnLocationChanged;
+        _subscription.Dispose();
+    }
+}

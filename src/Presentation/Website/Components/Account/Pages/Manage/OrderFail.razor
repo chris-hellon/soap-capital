@@ -1,0 +1,18 @@
+@page "/account/order-fail/{OrderId:int}"
+
+<PageHeaderTitle Title="Order Fail"/>
+
+<MudCard Elevation="5">
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h4">Your order has failed.</MudText>
+        </CardHeaderContent>
+    </MudCardHeader>
+    <MudCardContent>
+        <MudText>Your order has not been successful. Please try the order again, or contact us on live chat.</MudText>
+    </MudCardContent>
+</MudCard>
+
+@code {
+    [SupplyParameterFromQuery] [Parameter] public int OrderId { get; set; }
+}

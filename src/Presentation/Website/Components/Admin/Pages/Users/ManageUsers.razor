@@ -1,0 +1,149 @@
+@page "/admin/users/manage-users"
+
+@using SoapCapital.Application.Catalog.Users.Dto
+@using SoapCapital.Application.Catalog.Users.Commands
+@using SoapCapital.Application.Catalog.Users.Queries
+@using Mapster
+@using SoapCapital.Application.Catalog.Packages.Dto
+@using SoapCapital.Application.Catalog.Packages.Queries
+
+@attribute [StreamRendering]
+
+@inject Application.Identity.IUserService UsersService
+@inject IPackagesService PackagesService
+
+<SectionContent SectionName="PageHeaderTitle">
+    <PageHeaderTitle Title="Manage Users"></PageHeaderTitle>
+</SectionContent>
+
+<EntityEditTable @ref="@EntityEditTable" TId="string" TEntity="UserDto" TRequest="UpdateUserRequest"
+                 EntityList="TableEntities" Fields="TableFields" SearchFunc="SearchUsers" Loading="Loading"
+                 EntityName="User"
+                 IdFunc="user => user.Id"
+                 CreateFunc="async user => await UsersService.CreateAsync(user.Adapt<CreateUserRequest>())"
+                 UpdateFunc="async user => await UsersService.UpdateAsync(user.Adapt<UpdateUserRequest>())"
+                 DeleteFunc="async id => await UsersService.DeleteAsync(id)"
+                 LoadDataFunc="async () => await UsersService.GetUsers(new GetUsersRequest())"
+                 AdvancedSearchEnabled="true">
+    <AdvancedSearchContent>
+        @if (Packages.Any())
+        {
+            <MudSelect T="int?" Label="Filter by Package" AnchorOrigin="Origin.BottomCenter" ValueChanged="Callback">
+                @foreach (var package in Packages)
+                {
+                    <MudSelectItem T="int?" Value="@package.Id">@package.Title</MudSelectItem>
+                }
+            </MudSelect>
+        }
+    </AdvancedSearchContent>
+    <EditFormContent>
+        <MudGrid>
+            <MudItem lg="12" xs="12">
+                <MudTextField For="@(() => context.UserName)" @bind-Value="context.UserName" Label="Username" Variant="Variant.Outlined"/>
+            </MudItem>
+            <MudItem lg="12" xs="12">
+                <MudTextField For="@(() => context.Email)" @bind-Value="context.Email" Label="Email" Variant="Variant.Outlined"/>
+            </MudItem>
+            <MudItem lg="12" xs="12">
+                <MudTextField For="@(() => context.DiscordUserName)" @bind-Value="context.DiscordUserName" Label="Discord Username" Variant="Variant.Outlined"/>
+            </MudItem>
+            <MudItem lg="12" xs="12">
+                <MudSelect For="@(() => context.PackageId)" @bind-Value="context.PackageId" T="int?" Label="Package" Variant="Variant.Outlined" AnchorOrigin="Origin.BottomCenter">
+                    @if (Packages.Any())
+                    {
+                        foreach (var package in Packages)
+                        {
+                            <MudSelectItem T="int?" Value="@package.Id">@package.Title</MudSelectItem>
+                        }
+                    }
+                </MudSelect>
+            </MudItem>
+
+            @if (string.IsNullOrEmpty(context.Id))
+            {
+                <MudItem lg="12" xs="12">
+                    <MudTextField For="@(() => context.Password)" @bind-Value="context.Password" Label="Password" Variant="Variant.Outlined"/>
+                </MudItem>
+                <MudItem lg="12" xs="12">
+                    <MudTextField For="@(() => context.ConfirmPassword)" @bind-Value="context.ConfirmPassword" Label="Confirm Password" Variant="Variant.Outlined"/>
+                </MudItem>
+            }
+            else
+            {
+                context.Password = "emptyPassword";
+                context.ConfirmPassword = "emptyPassword";
+
+                <MudTextField Style="display: none;" For="@(() => context.Password)" @bind-Value="context.Password" Variant="Variant.Outlined"/>
+                <MudTextField Style="display: none;" For="@(() => context.ConfirmPassword)" @bind-Value="context.ConfirmPassword" Variant="Variant.Outlined"/>
+            }
+        </MudGrid>
+    </EditFormContent>
+</EntityEditTable>
+
+
+@code {
+    private EntityEditTable<UserDto, UpdateUserRequest, string>? EntityEditTable { get; set; }
+
+    protected bool Loading = true;
+
+    public IEnumerable<UserDto> TableEntities { get; set; } = Enumerable.Empty<UserDto>();
+
+    private IEnumerable<PackageDto> Packages { get; set; } = Enumerable.Empty<PackageDto>();
+
+    public static List<EntityField<UserDto>> TableFields =>
+    [
+        new EntityField<UserDto>(user => user.UserName, "UserName"),
+        new EntityField<UserDto>(user => user.Email, "Email"),
+        new EntityField<UserDto>(user => user.DiscordUserName, "Discord Username"),
+        new EntityField<UserDto>(user => user.SignUpDate.ToShortDateString(), "Join Date"),
+        new EntityField<UserDto>(user => user.SubscriptionEndDate?.ToShortDateString(), "Expiry Date"),
+        new EntityField<UserDto>(user => user.DaysUntilExpiry is < 0 or null ? "-" : user.DaysUntilExpiry, "Expires In (days)", Width: "60px"),
+    ];
+
+    public static bool SearchUsers(string? searchString, UserDto user)
+    {
+        if (string.IsNullOrWhiteSpace(searchString))
+            return true;
+
+        return user.UserName.Contains(searchString,
+                   StringComparison.OrdinalIgnoreCase)
+               || user.Email
+                   .Contains(searchString,
+                       StringComparison.OrdinalIgnoreCase)
+               || user.DiscordUserName
+                   .Contains(searchString,
+                       StringComparison.OrdinalIgnoreCase)
+               || user.SignUpDate.ToShortDateString()
+                   .Contains(searchString,
+                       StringComparison.OrdinalIgnoreCase);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var usersTask = Task.Run(() => UsersService.GetUsers(new GetUsersRequest()));
+        var packagesTask = Task.Run(() => PackagesService.GetPackages(new GetPackagesRequest(true)));
+
+        await Task.WhenAll(usersTask, packagesTask);
+
+        TableEntities = usersTask.Result;
+        Packages = packagesTask.Result;
+
+        Loading = false;
+    }
+
+    private async Task Callback(int? packageId)
+    {
+        Loading = true;
+        
+        if (packageId.HasValue)
+        {
+            var users = await UsersService.GetUsers(new GetUsersRequest());
+            var packageUsers = users.Where(x => x.PackageId == packageId.Value);
+            
+            TableEntities = packageUsers;
+        }
+
+        Loading = false;
+    }
+
+}

@@ -1,0 +1,189 @@
+@page "/account/subscription/{UserAction?}/{PackageName?}/{PaymentMethod?}"
+@using SoapCapital.Application.Catalog.Packages.Dto
+@using SoapCapital.Application.Catalog.Packages.Queries
+@using System.Globalization
+@using Microsoft.AspNetCore.Identity
+@using SoapCapital.Application.Catalog.Notifications.Commands
+@using SoapCapital.Application.Catalog.Orders.Commands
+@using SoapCapital.Application.Common.Extensions
+@using SoapCapital.Application.OpenNode
+@using SoapCapital.Application.OpenNode.Commands
+@using SoapCapital.Application.Stripe
+@using SoapCapital.Application.Stripe.Commands
+@using System.Diagnostics
+@using SoapCapital.Application.Catalog.Subscriptions.Dto
+@using SoapCapital.Application.Catalog.Subscriptions.Queries
+
+@inject IPackagesService PackagesService
+@inject IOrdersService OrdersService
+@inject IOpenNodeService OpenNodeService
+@inject IStripeService StripeService
+@inject ICurrentUser CurrentUser
+@inject INotificationsService NotificationsService
+@inject ISubscriptionsService SubscriptionsService
+@inject IdentityUserAccessor UserAccessor
+
+<SectionContent SectionName="PageHeaderTitle">
+    <PageHeaderTitle Title="@PageTitle"/>
+</SectionContent>
+
+<StatusMessage Message="@Message"/>
+
+<MudGrid>
+    <MudItem lg="12" xs="12">
+        <MudText Typo="Typo.h5" GutterBottom="true">Order Summary</MudText>
+        <MudPaper Class="d-flex flex-column" Style="height:calc(100% - 35px)" Outlined="true">
+            <MudList Clickable="true">
+                <MudListItem Disabled="true" Icon="@(PaymentMethod == "bitcoin" ? CustomIcons.Bitcoin : Icons.Material.Filled.CreditCard)">
+                    <div class="d-flex">
+                        <MudText>Payment Method</MudText>
+                        <MudText Inline="true" Class="ml-auto">@PaymentMethod?.Replace("-", " ").Replace("credit card", "Credit Card").Replace("bitcoin", "Bitcoin")</MudText>
+                    </div>
+                </MudListItem>
+                <MudListItem Disabled="true" Icon="@Icons.Material.Filled.MiscellaneousServices">
+                    @if (Package != null)
+                    {
+                        <div class="d-flex">
+                            <MudText>@Package.Title</MudText>
+                            <MudText Class="ml-auto">@Package.Price.ToString("C", CultureInfo.GetCultureInfo("en-US"))</MudText>
+                        </div>
+                    }
+                </MudListItem>
+            </MudList>
+            <div class="mt-auto">
+                <MudDivider/>
+                <div class="d-flex pa-4">
+                    <MudText>Total:</MudText>
+                    <MudText Class="ml-auto">
+                        @if (Package != null)
+                        {
+                            <b>@Package.Price.ToString("C", CultureInfo.GetCultureInfo("en-US"))</b>
+                        }
+                    </MudText>
+                </div>
+            </div>
+
+        </MudPaper>
+
+    </MudItem>
+    <MudItem lg="12" xs="12">
+        @if (Package != null)
+        {
+            <EditForm Model="Package" OnSubmit="ConfirmSubscription" FormName="confirm-subscription">
+                <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" StartIcon="@Icons.Material.Filled.Login">
+                    Confirm Subscription
+                </MudButton>
+            </EditForm>
+        }
+    </MudItem>
+</MudGrid>
+
+@code {
+    [SupplyParameterFromQuery] [Parameter] public string? PackageName { get; set; }
+
+    [SupplyParameterFromQuery] [Parameter] public string? PaymentMethod { get; set; }
+
+    [SupplyParameterFromQuery] [Parameter] public string? UserAction { get; set; }
+
+    [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
+
+    private IEnumerable<IdentityError>? _identityErrors;
+
+    private string? Message => _identityErrors is null ? null : $"Error: {string.Join(", ", _identityErrors.Select(error => error.Description))}";
+
+    private PackageDto? Package { get; set; }
+
+    private string? PageTitle { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        PageTitle = $"{(UserAction ?? "Manage")} Subscription";
+
+        if (PaymentMethod == null || PackageName == null)
+            NavigationManager.NavigateTo("/account/subscription");
+
+        var packages = await PackagesService.GetPackages(new GetPackagesRequest(false));
+
+        var packageDtos = packages as PackageDto[] ?? packages.ToArray();
+
+        if (packageDtos.Any())
+            Package = packageDtos.FirstOrDefault(p => p.Title.UrlFriendly() == PackageName);
+    }
+
+    private async Task ConfirmSubscription()
+    {
+        var userId = CurrentUser.GetUserId().ToString();
+        SubscriptionDto? currentSubscription = null;
+        
+        if (UserAction == "upgrade")
+        {
+            currentSubscription = await SubscriptionsService.GetUserSubscription(new GetUserSubscriptionRequest(userId));
+        }
+
+        if (Package != null)
+        {
+            var orderId = await OrdersService.CreateOrder(new CreateOrderRequest(Package.Id, Package.Price, userId, false, currentSubscription?.Id));
+
+            if (orderId == 0)
+            {
+                _identityErrors = new[] {new IdentityError {Code = "500", Description = "There was an error creating your Order, please Live Chat us for assistance."}};
+                return;
+            }
+
+            var successUrl = $"{NavigationManager.BaseUri}account/my-orders/order-status/{orderId}";
+            var cancelUrl = $"{NavigationManager.BaseUri}account/order-fail/{orderId}";
+        
+            if (orderId > 0)
+            {
+                if (PaymentMethod == "bitcoin")
+                {
+                    var webhookUrl = $"{NavigationManager.BaseUri}open-node-webhook/{orderId}";
+
+                    if (currentSubscription != null)
+                    {
+                        webhookUrl += $"/{currentSubscription.Id}";
+                        successUrl += $"/{currentSubscription.Id}";
+                    }
+                
+                    var user = await UserAccessor.GetRequiredUserAsync(HttpContext);
+
+                    var createChargeResponse = await OpenNodeService.CreateOpenNodeCharge(new CreateOpenNodeChargeRequest(
+                        Package.Title,
+                        Package.Price,
+                        orderId,
+                        user.UserName!,
+                        user.Email!,
+                        user.Email!,
+                        successUrl,
+                        webhookUrl));
+
+                    if (createChargeResponse is {Data: not null} && !string.IsNullOrEmpty(createChargeResponse.Data.CheckoutUrl))
+                    {
+                        await OrdersService.UpdateOrder(new UpdateOrderRequest(orderId, createChargeResponse.Data?.Id, false, null));
+                        Debug.Assert(createChargeResponse.Data != null, "createChargeResponse.Data != null");
+
+                        await NotificationsService.CreateNotification(new CreateNotificationRequest("Your order has been processed. If you haven't yet completed your payment, click here to proceed.", createChargeResponse.Data.CheckoutUrl, false, userId));
+
+                        NavigationManager.NavigateTo(createChargeResponse.Data.CheckoutUrl);
+                    }
+                    else
+                    {
+                        _identityErrors = new[] {new IdentityError {Code = "500", Description = "There was an error creating your Bitcoin Order, please Live Chat us for assistance."}};
+                        return;
+                    }
+                }
+                else
+                {
+                    var stripeSession = await StripeService.CreateStripeSession(new CreateStripeSessionRequest(Package.StripePriceId, successUrl, cancelUrl));
+                    await NotificationsService.CreateNotification(new CreateNotificationRequest("Your order has been processed. If you haven't yet completed your payment, click here to proceed.", stripeSession.Url, false, userId));
+                    await OrdersService.UpdateOrder(new UpdateOrderRequest(orderId, null, false, stripeSession.Id));
+                
+                    NavigationManager.NavigateTo(stripeSession.Url);
+                }
+
+                NavigationManager.NavigateTo("/account/subscription");
+            }
+        }
+    }
+
+}

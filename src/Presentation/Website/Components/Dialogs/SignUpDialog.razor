@@ -1,0 +1,27 @@
+@using SoapCapital.Application.Catalog.Packages.Dto
+@using System.Globalization
+
+<MudDialog Class="sign-up-modal">
+    <DialogContent>
+        <div class="d-flex justify-space-between align-center flex-grow-1">
+            <div>
+                <MudText>Sign up now for unrestricted access to premium content.</MudText>
+                @if (Package != null)
+                {
+                    <MudText Typo="Typo.body2"> Our <strong>@Package.Title</strong> package is now available at <strong>@Package.Price.ToString("C", CultureInfo.GetCultureInfo("en-US"))</strong> for <strong>@Package.Duration @(Package.DurationType)s</strong>.</MudText>
+                }
+            </div>
+            <div>
+                <MudButton Href="/choose-membership" Color="Color.Primary" Variant="Variant.Filled" Size="Size.Small">Sign Up</MudButton>
+                <MudButton OnClick="@(() => Cancel())" Color="Color.Primary" Variant="Variant.Text" Size="Size.Small">No thanks</MudButton>
+            </div>
+        </div>
+    </DialogContent>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance? MudDialog { get; set; }
+    [Parameter] public PackageDto? Package { get; set; }
+    
+    void Cancel() => MudDialog?.Cancel();
+}

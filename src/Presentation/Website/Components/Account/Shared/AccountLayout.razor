@@ -1,0 +1,39 @@
+﻿@inherits LayoutComponentBase
+
+<MudThemeProvider Theme="CurrentTheme"/>
+
+@if (HttpContext is null)
+{
+    <PreRenderLoader />
+}
+else
+{
+    <MudLayout>
+        <AccountNavMenu IsDarkMode="true" />
+        <MudMainContent>
+                    @Body
+        </MudMainContent>
+    </MudLayout>
+}
+
+@code {
+    public readonly MudTheme CurrentTheme = new DarkTheme();
+
+    [CascadingParameter] private HttpContext? HttpContext { get; set; }
+
+    protected override void OnInitialized()
+    {
+        NavbarService.ToggleNavbarTransparency(false);
+    }
+    protected override void OnParametersSet()
+    {
+        if (HttpContext is null)
+        {
+            // If this code runs, we're currently rendering in interactive mode, so there is no HttpContext.
+            // The identity pages need to set cookies, so they require an HttpContext. To achieve this we
+            // must transition back from interactive mode to a server-rendered page.
+            NavigationManager.Refresh(forceReload: true);
+        }
+    }
+
+}

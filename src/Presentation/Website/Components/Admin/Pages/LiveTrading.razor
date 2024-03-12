@@ -1,0 +1,93 @@
+@page "/admin/live-trading"
+
+@using SoapCapital.Application.Catalog.Charts.Dto
+@using SoapCapital.Application.Catalog.Charts.Queries
+@using SoapCapital.Infrastructure.Common.Services
+@using SoapCapital.Application.Catalog.Charts.Commands
+@using Mapster
+@inherits ChartsEntityTablePage
+
+@inject IChartsService ChartsService
+
+<SectionContent SectionName="PageHeaderTitle">
+    <PageHeaderTitle Title="Live Trading"></PageHeaderTitle>
+</SectionContent>
+
+<EntityEditTable @ref="@EntityEditTable" TId="int" TEntity="ChartDto" TRequest="UpdateChartRequest" EntityList="TableEntities" Fields="TableFields" SearchFunc="SearchCharts" Loading="Loading"
+                 IdFunc="chart => chart.Id"
+                 EntityName="Live Trading Chart"
+                 CreateFunc="async chart => await ChartsService.CreateChart(chart.Adapt<CreateChartRequest>())"
+                 UpdateFunc="async chart => await ChartsService.UpdateChart(chart.Adapt<UpdateChartRequest>())"
+                 DeleteFunc="async id => await ChartsService.DeleteChart(id)"
+                 LoadDataFunc="async () => await ChartsService.GetCharts(new GetChartsRequest(true, 99999))">
+    <EditFormContent>
+        <MudGrid>
+            <MudItem lg="12" xs="12">
+                <MudTextField For="@(() => context.Title)" @bind-Value="context.Title" Label="Title" Variant="Variant.Outlined"/>
+            </MudItem>
+            <MudItem lg="12" xs="12">
+                <MudTextField For="@(() => context.NavigateUrl)" @bind-Value="context.NavigateUrl" Label="Navigate Url" HelperText="This can be a link to Discord, Trading View etc" Variant="Variant.Outlined"/>
+            </MudItem>
+            <MudItem lg="12" xs="12">
+                <MudStack>
+                    <MudItem xs="12" md="12">
+                        <div>
+                            <MudButton HtmlTag="label" DisableElevation Variant="Variant.Filled" Color="Color.Secondary" Size="Size.Small"
+                                       StartIcon="@Icons.Material.Filled.CloudUpload" for="fileInput">
+                                Select Chart Image
+                            </MudButton>
+                            <ValidationMessage class="mud-input-helper-text mud-input-error" For="() => context.ImageUrl"/>
+                            @if (EntityEditTable is {AddEditModal: not null})
+                            {
+                                if (!EntityEditTable.AddEditModal.IsCreate && !string.IsNullOrEmpty(context.ImageUrl) && string.IsNullOrEmpty(context.ImageInBytes))
+                                {
+                                    <MudButton HtmlTag="label" DisableElevation Variant="Variant.Filled" Color="Color.Secondary" Size="Size.Small" Target="_blank"
+                                               StartIcon="@Icons.Material.Filled.RemoveRedEye" Link="@(context.ImageUrl)" Style="margin-left: 5px;">
+                                        "View"
+                                    </MudButton>
+                                }
+                            }
+                        </div>
+
+                        <InputFile id="fileInput" hidden OnChange="UploadFiles"/>
+                    </MudItem>
+                    <MudItem xs="12" md="12">
+                        @if (!string.IsNullOrEmpty(context.ImageInBytes))
+                        {
+                            <MudAvatar Image="@context.ImageInBytes" Square="true" Style="height: auto; width: auto; max-height: 100%"> </MudAvatar>
+                        }
+                        else
+                        {
+                            <MudAvatar Image="@(string.IsNullOrEmpty(@context.ImageUrl) ? string.Empty : (@context.ImageUrl))" Square="true" Style="height: auto; width: auto; max-height: 100%"> </MudAvatar>
+                        }
+                    </MudItem>
+                </MudStack>
+
+            </MudItem>
+        </MudGrid>
+    </EditFormContent>
+</EntityEditTable>
+
+@code {
+    private EntityEditTable<ChartDto, UpdateChartRequest, int>? EntityEditTable { get; set; }
+
+    protected override async Task<Task> OnInitializedAsync()
+    {
+        TableEntities = await ChartsService.GetCharts(new GetChartsRequest(true, 99999));
+
+        return base.OnInitializedAsync();
+    }
+
+    private async Task UploadFiles(InputFileChangeEventArgs e)
+    {
+        var fileUploadDetails = await FileUploadHelper.UploadFile(e, Snackbar);
+
+        if (fileUploadDetails != null && EntityEditTable is {RequestModel: not null, AddEditModal: not null})
+        {
+            EntityEditTable.RequestModel.ImageExtension = fileUploadDetails.Extension;
+            EntityEditTable.RequestModel.ImageInBytes = fileUploadDetails.FileInBytes;
+            EntityEditTable.RequestModel.ImageUrl = fileUploadDetails.Extension;
+            EntityEditTable.AddEditModal.ForceRender();
+        }
+    }
+}

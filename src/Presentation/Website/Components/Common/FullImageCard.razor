@@ -1,0 +1,31 @@
+<MudItem lg="4" Style="@($"height:{Height}px;")" Class="relative fullImageCard">
+    <MudImage Src="@ImageUrl" ObjectFit="ObjectFit.Cover" Class="rounded-lg"></MudImage>
+
+    <MudLink Href="@ImageUrl" Target="_blank">
+        <Mask BackgroundColor="hsla(0, 0%, 98.4%, 0.12)">
+            <MaskContent>
+                <div class="d-flex justify-start align-end h-100">
+                    <MudText Typo="Typo.h6" Class="mud-text-white mb-4 ms-6">@Title</MudText>
+                </div>
+            </MaskContent>
+        </Mask>
+    </MudLink>
+    @* <a href="@Model.ImageUrl" target="_blank"> *@
+    @*             <div class="mask" style="background-color: rgba(0, 0, 0, 0.3)"> *@
+    @*                 <div class="d-flex justify-content-start align-items-end h-100"> *@
+    @*                     <h5 class="text-white mb-2 ms-3">@Model.Title</h5> *@
+    @*                 </div> *@
+    @*             </div> *@
+    @*             <div class="hover-overlay"> *@
+    @*                 <div class="mask" style="background-color: hsla(0, 0%, 98.4%, 0.12)"></div> *@
+    @*             </div> *@
+    @*         </a> *@
+    @* *@
+
+</MudItem>
+
+@code {
+    [Parameter] public string? ImageUrl { get; set; }
+    [Parameter] public string? Title { get; set; }
+    [Parameter] public int Height { get; set; }
+}

@@ -1,0 +1,40 @@
+@page "/members/live-trading"
+@using SoapCapital.Application.Catalog.Charts.Queries
+@using SoapCapital.Application.Catalog.Charts.Dto
+
+@attribute [StreamRendering]
+
+@inject IChartsService ChartsService
+
+<SectionContent SectionName="PageHeaderTitle">  
+    <PageHeaderTitle Title="Live Trading"></PageHeaderTitle>
+</SectionContent>
+
+@if (LiveTradingChart != null)
+{
+    <MudLink Href="@(LiveTradingChart.NavigateUrl ?? LiveTradingChart.ImageUrl)" Target="_blank">
+        <MudImage Src="@LiveTradingChart.ImageUrl" Fluid="true" Elevation="2"></MudImage>
+    </MudLink>
+    
+    <MudPaper Class="pa-8 mt-5" Elevation="2">
+        <MudText Typo="Typo.h6">
+            @if (LiveTradingChart.Title != null)
+            {
+                @((MarkupString) LiveTradingChart.Title)
+            }
+        </MudText>
+    </MudPaper>
+}
+else
+{
+    <MudSkeleton Height="500px" SkeletonType="SkeletonType.Rectangle"/>
+}
+
+@code {
+    private ChartDto? LiveTradingChart { get; set; }
+    
+    protected override async Task OnInitializedAsync()
+    {
+        LiveTradingChart = await ChartsService.GetChart(new GetChartRequest(null, true));
+    }
+}

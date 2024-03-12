@@ -1,0 +1,43 @@
+@using Microsoft.Extensions.Options
+@using SoapCapital.Application.Catalog.Subscriptions.Dto
+@using SoapCapital.Infrastructure.Configuration
+@inject IOptions<AppSettings> AppSettings
+
+@if (AppSettings.Value.SocialLinks.Any())
+{
+    foreach (var socialLink in AppSettings.Value.SocialLinks)
+    {
+        if (socialLink.RequiresAuth.HasValue && socialLink.RequiresAuth.Value)
+        {
+            if (!UserIsSignedIn)
+                continue;
+        }
+
+        var startIcon = socialLink.IconClass switch
+        {
+            "fa-twitter" => Icons.Custom.Brands.Twitter,
+            "fa-youtube" => Icons.Custom.Brands.YouTube,
+            "fa-substack" => CustomIcons.SubStack,
+            "fa-discord" => Icons.Custom.Brands.Discord,
+            _ => string.Empty
+        };
+
+        if (socialLink.IconClass == "fa-discord")
+        {
+            if (UserSubscription != null && UserSubscription.PackageId != 5)
+            {
+                <MudIconButton Color="@(IsDarkMode ? Color.Tertiary : Color.Dark)" Href="@socialLink.Url" Target="_blank" Icon="@startIcon" Size="Size.Small" Class="@($"{(socialLink != AppSettings.Value.SocialLinks.Last() ? "me-3" : "")}{(socialLink.IconClass == "fa-substack" ? "substack-icon" : "")}")"/>
+            }
+        }
+        else
+        {
+            <MudIconButton Color="@(IsDarkMode ? Color.Tertiary : Color.Dark)" Href="@socialLink.Url" Target="_blank" Icon="@startIcon" Size="Size.Small" Class="@($"{(socialLink != AppSettings.Value.SocialLinks.Last() ? "me-3" : "")}{(socialLink.IconClass == "fa-substack" ? "substack-icon" : "")}")"/>
+        }
+    }
+}
+
+@code {
+    [Parameter] public bool UserIsSignedIn { get; set; }
+    [Parameter] public bool IsDarkMode { get; set; }
+    [Parameter] public SubscriptionDto? UserSubscription { get; set; }
+}

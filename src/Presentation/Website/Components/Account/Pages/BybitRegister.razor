@@ -1,0 +1,252 @@
+@page "/bybit-sign-up/{BybitUserId?}"
+
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Identity
+@using SoapCapital.Application.Bybit
+@using SoapCapital.Application.ByBit.Queries
+@using SoapCapital.Application.Catalog.Notifications.Commands
+@using SoapCapital.Application.Catalog.Orders.Commands
+@using SoapCapital.Application.Catalog.Packages.Dto
+@using SoapCapital.Application.Catalog.Subscriptions.Commands
+@using SoapCapital.Infrastructure.Identity
+
+@inject UserManager<ApplicationUser> UserManager
+@inject IUserStore<ApplicationUser> UserStore
+@inject SignInManager<ApplicationUser> SignInManager
+@inject NavigationManager NavigationManager
+@inject IdentityRedirectManager RedirectManager
+@inject IPackagesService PackagesService
+@inject IOrdersService OrdersService
+@inject ISubscriptionsService SubscriptionsService
+@inject INotificationsService NotificationsService
+@inject IBybitService BybitService
+
+<PageHeaderTitle Title="Sign Up"/>
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="pt-8">
+    <MudPaper Elevation="25" Class="pa-8 w-100">
+        @* <div class="d-flex justify-center"> *@
+        @*     <MudImage Src="https://paperstreetsoap.azureedge.net/site/logo.png" Height="120"/> *@
+        @* </div> *@
+        <div class="fsh-center-text">
+            @if (Package != null)
+            {
+                <MudText Typo="Typo.body1" Class="mb-3" Align="Align.Center">Welcome to Soap Capital.</MudText>
+                <MudText Typo="Typo.body1" Class="mb-3" Align="Align.Center">As a Bybit subscriber you have access to our <br /><strong>@Package.Title</strong> for @Package.Duration @($"{Package.DurationType}{(Package.Duration > 1 ? "s" : "")}").</MudText>
+                <MudText Typo="Typo.body1" Align="Align.Center">Please complete your sign up below.</MudText>
+            }
+
+        </div>
+
+        <MudDivider Class="mt-5 mb-5"></MudDivider>
+
+        <EditForm Model="Input" method="post" OnValidSubmit="RegisterUser" FormName="register">
+            <MudGrid Spacing="3">
+                <DataAnnotationsValidator/>
+                <StatusMessage Message="@Message"/>
+
+                <ValidationSummary/>
+
+                <MudGrid Spacing="1">
+                    <MudItem xs="12">
+                        <div class="mud-input-control mud-input-input-control">
+                            <div class="mud-input-control-input-container">
+                                <div class="mud-input mud-input-outlined">
+                                    <InputText @bind-Value="Input.Email" class="mud-input-slot mud-input-root mud-input-root-outlined" autocomplete="username" aria-required="true" placeholder="Email"/>
+                                    <div class="mud-input-adornment mud-input-adornment-end"></div>
+                                    <div class="mud-input-outlined-border"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <ValidationMessage For="() => Input.Email" class="mud-input-helper-text mud-input-error"/>
+                    </MudItem>
+                    <MudItem xs="12">
+                        <div class="mud-input-control mud-input-input-control">
+                            <div class="mud-input-control-input-container">
+                                <div class="mud-input mud-input-outlined">
+                                    <InputText @bind-Value="Input.Username" class="mud-input-slot mud-input-root mud-input-root-outlined" autocomplete="username" aria-required="true" placeholder="Username"/>
+                                    <div class="mud-input-adornment mud-input-adornment-end"></div>
+                                    <div class="mud-input-outlined-border"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <ValidationMessage For="() => Input.Username" class="mud-input-helper-text mud-input-error"/>
+                    </MudItem>
+                    <MudItem xs="12">
+                        <div class="mud-input-control mud-input-input-control">
+                            <div class="mud-input-control-input-container">
+                                <div class="mud-input mud-input-outlined">
+                                    <InputText @bind-Value="Input.DiscordUsername" class="mud-input-slot mud-input-root mud-input-root-outlined" autocomplete="username" aria-required="true" placeholder="Discord Username"/>
+                                    <div class="mud-input-adornment mud-input-adornment-end"></div>
+                                    <div class="mud-input-outlined-border"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <ValidationMessage For="() => Input.DiscordUsername" class="mud-input-helper-text mud-input-error"/>
+                    </MudItem>
+                    <MudItem xs="12">
+                        <div class="mud-input-control mud-input-input-control">
+                            <div class="mud-input-control-input-container">
+                                <div class="mud-input mud-input-outlined">
+                                    <InputText @bind-Value="Input.Password" type="password" class="mud-input-slot mud-input-root mud-input-root-outlined" autocomplete="password" aria-required="true" placeholder="Password"/>
+                                    <div class="mud-input-adornment mud-input-adornment-end"></div>
+                                    <div class="mud-input-outlined-border"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <ValidationMessage For="() => Input.Password" class="mud-input-helper-text mud-input-error"/>
+                    </MudItem>
+                    <MudItem xs="12">
+                        <div class="mud-input-control mud-input-input-control">
+                            <div class="mud-input-control-input-container">
+                                <div class="mud-input mud-input-outlined">
+                                    <InputText @bind-Value="Input.ConfirmPassword" type="password" class="mud-input-slot mud-input-root mud-input-root-outlined" autocomplete="confirm password" aria-required="true" placeholder="Confirm Password"/>
+                                    <div class="mud-input-adornment mud-input-adornment-end"></div>
+                                    <div class="mud-input-outlined-border"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <ValidationMessage For="() => Input.ConfirmPassword" class="mud-input-helper-text mud-input-error"/>
+                    </MudItem>
+
+                    <MudItem xs="12" Class="d-flex justify-center">
+                        <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large" StartIcon="@Icons.Material.Filled.Login" Style="width: 100%;">
+                            Sign In
+                        </MudButton>
+                    </MudItem>
+                </MudGrid>
+            </MudGrid>
+        </EditForm>
+    </MudPaper>
+</MudContainer>
+
+
+@code {
+    private IEnumerable<IdentityError>? _identityErrors;
+
+    [SupplyParameterFromForm] private InputModel Input { get; set; } = new();
+
+    [SupplyParameterFromQuery] [Parameter] public string? BybitUserId { get; set; }
+
+    private PackageDto? Package { get; set; }
+
+    private string? Message => _identityErrors is null ? null : $"Error: {string.Join(", ", _identityErrors.Select(error => error.Description))}";
+
+    protected override async Task OnInitializedAsync()
+    {
+        Package = await PackagesService.GetPackage(5);
+    }
+
+    public async Task RegisterUser(EditContext editContext)
+    {
+        var user = CreateUser();
+
+        if (BybitUserId != null)
+        {
+            var byBitUser = await BybitService.GetAffiliateUsers(new GetAffiliateUsersRequest(BybitUserId));
+
+            if (byBitUser is {Result: not null})
+            {
+                if (Package != null)
+                {
+                    user.DiscordUsername = Input.DiscordUsername;
+                    user.SignUpDate = DateTime.Now;
+                    user.BybitId = BybitUserId;
+
+                    await UserStore.SetUserNameAsync(user, Input.Username, CancellationToken.None);
+                    var emailStore = GetEmailStore();
+                    await emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
+                    var result = await UserManager.CreateAsync(user, Input.Password);
+
+                    if (!result.Succeeded)
+                    {
+                        _identityErrors = result.Errors;
+                        return;
+                    }
+
+                    await SignInManager.SignInAsync(user, isPersistent: false);
+
+                    var orderId = await OrdersService.CreateOrder(new CreateOrderRequest(Package.Id, Package.Price, user.Id, true));
+
+                    if (orderId == 0)
+                    {
+                        _identityErrors = new[] {new IdentityError {Code = "500", Description = "There was an error creating your Order, please Live Chat us for assistance."}};
+                        return;
+                    }
+
+                    await SubscriptionsService.CreateSubscription(new CreateSubscriptionRequest(user.Id, Package.Id, orderId));
+                    await NotificationsService.CreateNotification(new CreateNotificationRequest($"Welcome to Soap Capital. You have successfully signed up from Bybit, and have access to our {Package.Title} for {Package.Duration} {Package.DurationType}{(Package.Duration > 1 ? "s" : "")}.", null, false, user.Id));
+
+                    RedirectManager.RedirectTo("/members/latest-review");
+                }
+            }
+            else
+                _identityErrors = new List<IdentityError>()
+                {
+                    new()
+                    {
+                        Code = "500",
+                        Description = "Error: No Bybit user found with this User Id."
+                    }
+                };
+        }
+    }
+
+    private static ApplicationUser CreateUser()
+    {
+        try
+        {
+            return Activator.CreateInstance<ApplicationUser>();
+        }
+        catch
+        {
+            throw new InvalidOperationException($"Can't create an instance of '{nameof(ApplicationUser)}'. " +
+                                                $"Ensure that '{nameof(ApplicationUser)}' is not an abstract class and has a parameterless constructor.");
+        }
+    }
+
+    private IUserEmailStore<ApplicationUser> GetEmailStore()
+    {
+        if (!UserManager.SupportsUserEmail)
+        {
+            throw new NotSupportedException("The default UI requires a user store with email support.");
+        }
+
+        return (IUserEmailStore<ApplicationUser>) UserStore;
+    }
+
+    private sealed class InputModel
+    {
+        [Required]
+        [Display(Name = "Username")]
+        public string Username { get; set; } = "";
+
+        [Required]
+        [EmailAddress]
+        [Display(Name = "Email")]
+        public string Email { get; set; } = "";
+
+        [Required]
+        [Display(Name = "Discord Username")]
+        public string DiscordUsername { get; set; } = "";
+
+        [Display(Name = "Bybit User Id")] public string? BybitId { get; set; }
+
+        [Required]
+        [StringLength(100, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 6)]
+        [DataType(DataType.Password)]
+        [Display(Name = "Password")]
+        public string Password { get; set; } = "";
+
+        [DataType(DataType.Password)]
+        [Display(Name = "Confirm password")]
+        [Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
+        public string ConfirmPassword { get; set; } = "";
+    }
+
+}

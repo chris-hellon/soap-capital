@@ -1,0 +1,119 @@
+﻿@page "/login-with-2fa"
+
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Identity
+@using SoapCapital.Infrastructure.Identity
+
+@inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
+@inject IdentityRedirectManager RedirectManager
+@inject ILogger<LoginWith2fa> Logger
+
+<PageHeaderTitle Title="Two-factor authentication"/>
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="pt-8">
+    <MudPaper Elevation="25" Class="pa-8">
+        <div class="d-flex justify-center">
+            <MudImage Src="https://paperstreetsoap.azureedge.net/site/logo.png" Height="120"/>
+        </div>
+        <div class="fsh-center-text">
+            <MudText Typo="Typo.body1" Align="Align.Center">Your login is protected with an authenticator app. Enter your authenticator code below.</MudText>
+        </div>
+
+        <MudDivider Class="mt-5 mb-5"></MudDivider>
+
+        <EditForm Model="Input" method="post" FormName="login-with-2fa" OnValidSubmit="OnValidSubmitAsync">
+            <MudGrid Spacing="1">
+                <DataAnnotationsValidator/>
+                <StatusMessage Message="@message"/>
+
+                <MudItem xs="12">
+                    <div class="mud-input-control mud-input-input-control">
+                        <div class="mud-input-control-input-container">
+                            <div class="mud-input mud-input-outlined">
+                                <InputText @bind-Value="Input.TwoFactorCode" class="mud-input-slot mud-input-root mud-input-root-outlined" autocomplete="username" aria-required="true" placeholder="Authenticator code"/>
+                                <div class="mud-input-adornment mud-input-adornment-end"></div>
+                                <div class="mud-input-outlined-border"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <ValidationMessage For="() => Input.TwoFactorCode" class="mud-input-helper-text mud-input-error"/>
+                </MudItem>
+                <MudItem xs="12">
+                    <div class="checkbox mb-3">
+                        <label for="remember-machine" class="form-label">
+                            <InputCheckbox @bind-Value="Input.RememberMachine"/>
+                            Remember this machine
+                        </label>
+                    </div>
+                </MudItem>
+                <MudItem xs="12" Class="d-flex justify-center">
+                    <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large" StartIcon="@Icons.Material.Filled.Login" Style="width: 100%;">
+                        Sign In
+                    </MudButton>
+                </MudItem>
+            </MudGrid>
+        </EditForm>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private string? message;
+    private ApplicationUser user = default!;
+
+    [SupplyParameterFromForm] private InputModel Input { get; set; } = new();
+
+    [SupplyParameterFromQuery] private string? ReturnUrl { get; set; }
+
+    [SupplyParameterFromQuery] private bool RememberMe { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Ensure the user has gone through the username & password screen first
+        user = await SignInManager.GetTwoFactorAuthenticationUserAsync() ??
+               throw new InvalidOperationException("Unable to load two-factor authentication user.");
+    }
+
+    private async Task OnValidSubmitAsync()
+    {
+        var authenticatorCode = Input.TwoFactorCode!.Replace(" ", string.Empty).Replace("-", string.Empty);
+        var result = await SignInManager.TwoFactorAuthenticatorSignInAsync(authenticatorCode, RememberMe, Input.RememberMachine);
+        var userId = await UserManager.GetUserIdAsync(user);
+
+        if (result.Succeeded)
+        {
+            Logger.LogInformation("User with ID '{UserId}' logged in with 2fa.", userId);
+            
+            if (string.IsNullOrEmpty(ReturnUrl))
+            {
+                ReturnUrl = "/members/latest-review";
+            }
+            
+            RedirectManager.RedirectTo(ReturnUrl);
+        }
+        else if (result.IsLockedOut)
+        {
+            Logger.LogWarning("User with ID '{UserId}' account locked out.", userId);
+            RedirectManager.RedirectTo("Account/Lockout");
+        }
+        else
+        {
+            Logger.LogWarning("Invalid authenticator code entered for user with ID '{UserId}'.", userId);
+            message = "Error: Invalid authenticator code.";
+        }
+    }
+
+    private sealed class InputModel
+    {
+        [Required]
+        [StringLength(7, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 6)]
+        [DataType(DataType.Text)]
+        [Display(Name = "Authenticator code")]
+        public string? TwoFactorCode { get; set; }
+
+        [Display(Name = "Remember this machine")]
+        public bool RememberMachine { get; set; }
+    }
+
+}

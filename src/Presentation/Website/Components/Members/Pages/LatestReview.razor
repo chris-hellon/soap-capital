@@ -1,0 +1,63 @@
+@page "/members/latest-review"
+@using SoapCapital.Application.Catalog.Videos.Dto
+@using SoapCapital.Application.Catalog.Videos.Queries
+
+@attribute [StreamRendering]
+
+@inject IVideosService VideosService
+@inject PersistentComponentState ApplicationState
+
+@implements IDisposable
+
+<SectionContent SectionName="PageHeaderTitle">  
+    <PageHeaderTitle Title="Latest Review"></PageHeaderTitle>
+</SectionContent>
+
+@if (LatestReviewVideo != null)
+{
+    <VideoPlayer Title="@LatestReviewVideo.Title" VideoUrl="@LatestReviewVideo.VideoUrl"></VideoPlayer>
+    
+    <MudPaper Class="pa-8 mt-5" Elevation="2">
+        <MudText Typo="Typo.h6">@((MarkupString) LatestReviewVideo.Details)</MudText>
+    </MudPaper>
+}
+else
+{
+    <MudSkeleton Height="500px" SkeletonType="SkeletonType.Rectangle"/>
+}
+
+@code {
+    private VideoDto? LatestReviewVideo { get; set; }
+
+    private PersistingComponentStateSubscription _subscription;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        _subscription = ApplicationState.RegisterOnPersisting(Persist);
+        
+        var foundInState = ApplicationState
+            .TryTakeFromJson<VideoDto?>("latestReview", out var latestReviewVideo);
+        
+        LatestReviewVideo = (foundInState
+            ? latestReviewVideo
+            : await GetLatestReview()!) ?? null;
+    }
+
+    private async Task<VideoDto?>? GetLatestReview()
+    {
+        var latestReview = await VideosService.GetVideos(new GetLatestReviewRequest());
+        var videoDtos = latestReview as VideoDto[] ?? latestReview.ToArray();
+        return videoDtos.Any() ? videoDtos.First() : null;
+    }
+
+    private Task Persist()
+    {
+        ApplicationState.PersistAsJson("latestReview", LatestReviewVideo);
+        return Task.CompletedTask;
+    }
+    
+    public void Dispose()
+    {
+        _subscription.Dispose();
+    }
+}

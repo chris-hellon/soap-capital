@@ -1,0 +1,192 @@
+@page "/admin/videos"
+
+@inherits VideosEntityTablePage
+
+@using SoapCapital.Application.Catalog.Videos.Dto
+@using SoapCapital.Application.Catalog.Videos.Queries
+@using Mapster
+@using SoapCapital.Application.Catalog.Notifications.Commands
+@using SoapCapital.Application.Catalog.Notifications.Dto
+@using SoapCapital.Application.Catalog.Users.Queries
+@using SoapCapital.Application.Catalog.Videos.Commands
+@using SoapCapital.Application.Mailing
+@using SoapCapital.Website.EmailTemplates
+@using BlazorTemplater
+@using SoapCapital.Application.Catalog.Users.Dto
+@using SoapCapital.Application.Common.Extensions
+
+@inject IVideosService VideosService 
+@inject IUsersService UsersService;
+@inject INotificationsService NotificationsService;
+@inject IMailService MailService;
+
+<SectionContent SectionName="PageHeaderTitle">
+    <PageHeaderTitle Title="Videos"></PageHeaderTitle>
+</SectionContent>
+
+<EntityEditTable TId="int" TEntity="VideoDto" TRequest="UpdateVideoRequest" EntityList="TableEntities" Fields="TableFields" SearchFunc="SearchVideos" Loading="Loading" EntityName="Video"
+             IdFunc="video => video.Id"
+             CreateFunc="async video => await CreateVideo(video.Adapt<CreateVideoRequest>())"
+             UpdateFunc="async video => await VideosService.UpdateVideo(video.Adapt<UpdateVideoRequest>())"
+             DeleteFunc="async id => await VideosService.DeleteVideo(id)"
+             LoadDataFunc="async () => await VideosService.GetVideos(new GetVideosRequest())">
+    <EditFormContent>
+        <MudGrid>
+            <MudItem lg="12" xs="12">
+                <MudTextField For="@(() => context.Title)" @bind-Value="context.Title" Label="Video Title" Variant="Variant.Outlined"/>
+            </MudItem>
+            <MudItem lg="12" xs="12">
+                <MudTextField For="@(() => context.VideoUrl)" @bind-Value="context.VideoUrl" Label="Video Url" Variant="Variant.Outlined"/>
+            </MudItem>
+            <MudItem xs="12" md="12">
+                <MudInputLabel Class="mb-3">Details</MudInputLabel>
+                <Editor ClassName="@(ChartsThemeService.IsDarkMode ? "tiny-mce-dark-mode" : "")" @bind-Value="context.Details" Field="@(() => context.Details)" Conf="@TinyMceConfig.Styles(ChartsThemeService.IsDarkMode)" ApiKey="@TinyMceConfig.ApiKey"></Editor>
+            </MudItem>
+            <MudItem xs="12" lg="6">
+                <div>
+                    <MudText Typo="Typo.h6">Members</MudText>
+                    <MudCheckBox @bind-Value="@context.TodaysReview" Label="Latest Review" Color="Color.Primary"></MudCheckBox>
+                    <MudCheckBox @bind-Value="@context.MarketReview" Label="Market Reviews" Color="Color.Primary"></MudCheckBox>
+                    <MudCheckBox @bind-Value="@context.MembersEducation" Label="Education" Color="Color.Primary"></MudCheckBox>
+                    <MudCheckBox @bind-Value="@context.Resources" Label="Resources" Color="Color.Primary"></MudCheckBox>
+                </div>
+            </MudItem>
+            <MudItem xs="12" lg="6">
+                <div>
+                    <MudText Typo="Typo.h6">Free Content</MudText>
+                    <MudCheckBox @bind-Value="@context.FreeGmBitcoin" Label="Bitcoin" Color="Color.Primary"></MudCheckBox>
+                    <MudCheckBox @bind-Value="@context.FreeEducation" Label="Education" Color="Color.Primary"></MudCheckBox>
+                </div>
+            </MudItem>
+        </MudGrid>
+    </EditFormContent>
+</EntityEditTable>
+
+@code {
+    protected override void OnInitialized()
+    {
+        ChartsThemeService.OnDarkModeChanged += UpdateTheme;
+    }
+
+    private async Task UpdateTheme()
+    {
+        await Task.Delay(1);
+        StateHasChanged();
+    }
+    
+    protected override async Task<Task> OnInitializedAsync()
+    {
+        TableEntities = await VideosService.GetVideos(new GetVideosRequest());
+
+        return base.OnInitializedAsync();
+    }
+
+    protected async Task CreateVideo(CreateVideoRequest request)
+    {
+        var videoId = await VideosService.CreateVideo(request);
+        var emailSubscribedUsers = await UsersService.GetEmailSubscribedUsers(new GetEmailSubscribedUsersRequest());
+        
+        var emailSubscribedUserDtos = emailSubscribedUsers as EmailSubscribedUserDto[] ?? emailSubscribedUsers.ToArray();
+        if (!emailSubscribedUserDtos.Any()) return;
+        
+        string? membersCategory = null;
+        string? freeContentCategory = null;
+
+        if (request.MarketReview)
+            membersCategory = "market-reviews";
+        else if (request.Resources)
+            membersCategory = "resources";
+        else if (request.MembersEducation)
+            membersCategory = "education";
+        else if (request.TodaysReview)
+            membersCategory = "latest-review";
+        else if (request.FreeEducation)
+            freeContentCategory = "education";
+        else if (request.FreeGmBitcoin)
+            freeContentCategory = "gm-bitcoin";
+        
+        var notifications = new List<NotificationDto>();
+
+        if (membersCategory is {Length: > 0} || freeContentCategory is {Length: > 0})
+        {
+            if (request is {Title: not null, Details: not null})
+            {
+                var videoUrl = $"{request.BaseUrl}/login?returnUrl={(membersCategory != null ? "members" : "free-content")}/{membersCategory ?? freeContentCategory}/{videoId}/{request.Title.UrlFriendly()}";
+        
+                foreach (var emailSubscriber in emailSubscribedUserDtos)
+                {
+                    var unsubscribeUrl = $"{request.BaseUrl}/unsubscribe/{emailSubscriber.Id}";
+                    var mailHtml = new ComponentRenderer<NewVideoTemplate>()
+                        .Set(c => c.Model,
+                            new NewVideoTemplateModel(request.Title,
+                                request.Details,
+                                videoUrl,
+                                unsubscribeUrl))
+                        .Render();
+
+                    if (string.IsNullOrEmpty(emailSubscriber.Email)) continue;
+                    
+                    var mailRequest = new MailRequest(
+                        to: [emailSubscriber.Email],
+                        subject:"New Video Uploaded!",
+                        body: mailHtml);
+        
+                    await MailService.SendAsync(mailRequest);
+                }
+        
+                notifications = emailSubscribedUserDtos.Select(x => new NotificationDto()
+                {
+                    Body = "New Video Uploaded!",
+                    NavigateUrl = videoUrl,
+                    IsRead = false,
+                    UserId = x.Id,
+                    CreateDate = DateTime.Now,
+                    ReadDate = new DateTime?()
+                }).ToList();
+            }
+        }
+        else
+        {
+            if (request is {Title: not null, Details: not null})
+            {
+                var videoUrl = $"{request.BaseUrl}/login?returnUrl=members/latest-review/{videoId}/{request.Title.UrlFriendly()}";
+        
+                foreach (var emailSubscriber in emailSubscribedUserDtos)
+                {
+                    var unsubscribeUrl = $"{request.BaseUrl}/unsubscribe/{emailSubscriber.Id}";
+                    var mailHtml = new ComponentRenderer<NewVideoTemplate>()
+                        .Set(c => c.Model,
+                            new EmailTemplates.NewVideoTemplateModel(request.Title,
+                                request.Details,
+                                videoUrl,
+                                unsubscribeUrl))
+                        .Render();
+            
+                    if (string.IsNullOrEmpty(emailSubscriber.Email)) continue;
+                    
+                    var mailRequest = new MailRequest(
+                        to: [emailSubscriber.Email],
+                        subject:"New Video Uploaded!",
+                        body: mailHtml);
+        
+                    await MailService.SendAsync(mailRequest);
+                }
+        
+                notifications = emailSubscribedUserDtos.Select(x => new NotificationDto()
+                {
+                    Body = "New Video Uploaded!",
+                    NavigateUrl = videoUrl,
+                    IsRead = false,
+                    UserId = x.Id,
+                    CreateDate = DateTime.Now,
+                    ReadDate = new DateTime?()
+                }).ToList();
+            }
+        }
+        
+        if (notifications.Count > 0)
+        {
+            await NotificationsService.CreateNotifications(new CreateNotificationsRequest(notifications));
+        }
+    }
+}

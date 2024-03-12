@@ -1,0 +1,18 @@
+<component name="libraryTable">
+  <library name="Generated files" type="javaScript">
+    <properties>
+      <sourceFilesUrls>
+        <item url="file://$PROJECT_DIR$/Website/Components/Account/Pages/Manage/EnableAuthenticator.razor.min.js" />
+        <item url="file://$PROJECT_DIR$/Website/wwwroot/js/app.min.js" />
+        <item url="file://$PROJECT_DIR$/Website/wwwroot/lib/qrcode.min.js" />
+      </sourceFilesUrls>
+    </properties>
+    <CLASSES>
+      <root url="file://$PROJECT_DIR$/Website/Components/Account/Pages/Manage/EnableAuthenticator.razor.min.js" />
+      <root url="file://$PROJECT_DIR$/Website/wwwroot/lib/qrcode.min.js" />
+      <root url="file://$PROJECT_DIR$/Website/wwwroot/js/soapcapital.min.js" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

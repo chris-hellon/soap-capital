@@ -1,0 +1,38 @@
+﻿@using System.Net.Http
+@using System.Net.Http.Json
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Routing
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.AspNetCore.Components.Sections
+@using static Microsoft.AspNetCore.Components.Web.RenderMode
+@using Microsoft.AspNetCore.Components.Web.Virtualization
+@using Microsoft.JSInterop
+@using MudBlazor
+@using SoapCapital.Infrastructure.Auth
+@using SoapCapital.Application.Common.Interfaces
+@using SoapCapital.Application.Catalog.Interfaces
+@using SoapCapital.Website
+@using SoapCapital.Website.Components
+@using SoapCapital.Website.Components.Common
+@using SoapCapital.Website.Components.EntityTable
+@using SoapCapital.Website.Components.Layout
+@using SoapCapital.Website.Theme
+@using MudExtensions
+@using MudExtensions.Enums
+@using SoapCapital.Infrastructure.Common.Services
+@using TinyMCE.Blazor
+
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthState
+@* @inject MetadataTransferService MetadataTransferService *@
+@inject IHttpContextAccessor HttpContextAccessor
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject ILoadingService LoadingService
+@inject INavbarService NavbarService
+@inject IChartsThemeService ChartsThemeService
+@inject IInteractiveSubmittingService InteractiveSubmittingService
+@inject ICurrentUserInitializer CurrentUserInitializer
+@inject ICurrentUser CurrentUser
+@inject Serilog.ILogger Logger

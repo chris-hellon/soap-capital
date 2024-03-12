@@ -1,0 +1,40 @@
+<PageTitle>@($"{@Title} // Soap Capital")</PageTitle>
+
+<HeadContent>
+    <meta name="keywords" content="@($"{Title?.ToLower().Replace(" ", "")},soap capital,trading,cryptocurrency,crypto,cryptocurrency trading,bitcoin,ethereum,tyler durden,stocks,markets")"/>
+    <meta name="description" content="@($"{@Title} // The first rule of Soap Capital is: you do not talk about Soap Capital...")"/>
+    <meta property="og:description" content="@($"{@Title} // The first rule of Soap Capital is: you do not talk about Soap Capital...")"/>
+    <link rel="canonical" href="@NavigationManager.Uri">
+    <meta property="og:url" content="@NavigationManager.Uri"/>
+    <meta property="twitter:url" content="@NavigationManager.Uri"/>
+    <meta property="og:title" content="@($"{@Title} // Soap Capital")"/>
+    <meta property="twitter:title" content="@($"{@Title} // Soap Capital")"/>
+</HeadContent>
+
+@if (ShowImage)
+{
+    <MudContainer MaxWidth="MaxWidth.False" Class="mud-bg-black">
+        <div class="relative d-inline-block">
+            <div class="img-fade-left position-absolute top-0 start-0 d-block h-100"></div>
+            <img src="https://paperstreetsoap.azureedge.net/site/packages-banner.webp" class="img-fluid"/>
+            <div class="img-fade-right position-absolute top-0 end-0 d-block h-100"></div>
+        </div>
+    </MudContainer>
+
+    <div class="container pt-5">
+        <div class="text-center wow fadeInUp" data-wow-delay="0.1s">
+            <h1 class="text-center text-primary px-3">@Title</h1>
+        </div>
+    </div>
+}
+else
+{
+    <MudContainer MaxWidth="MaxWidth.False" Class="mud-bg-black">
+        <MudText Typo="Typo.h1" Align="Align.Center" Class="pt-4 pb-4 m-0" Color="Color.Tertiary">@Title</MudText>
+    </MudContainer>
+}
+
+@code {
+    [Parameter] public bool ShowImage { get; set; }
+    [Parameter] public string? Title { get; set; }
+}

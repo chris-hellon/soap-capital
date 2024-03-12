@@ -1,0 +1,8 @@
+<div class="d-flex align-center justify-center pb-8 @(Class)">
+    <MudText Typo="Typo.h3" Class="text-center">@Title</MudText>
+</div>
+
+@code {
+    [Parameter] public string? Title { get; set; }
+    [Parameter] public string? Class { get; set; }
+}

@@ -1,0 +1,117 @@
+@using SoapCapital.Infrastructure.Configuration
+@using Microsoft.Extensions.Options
+@using SoapCapital.Application.Catalog.Subscriptions.Queries
+@using SoapCapital.Shared.Authorization
+
+@inherits LayoutComponentBase
+@layout MainLayout
+
+@inject IOptions<AppSettings> AppSettings
+@inject ISubscriptionsService SubscriptionsService
+
+<SectionOutlet SectionName="PageHeaderTitle"/>
+
+<!-- TradingView Widget BEGIN -->
+<div class="tradingview-widget-container">
+  <div class="tradingview-widget-container__widget"></div>
+  <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js" async>
+  {
+  "symbols": [
+    {
+      "proName": "BITSTAMP:BTCUSD",
+      "title": "Bitcoin"
+    },
+    {
+      "proName": "BITSTAMP:ETHUSD",
+      "title": "Ethereum"
+    },
+    {
+      "description": "Dogecoin",
+      "proName": "BYBIT:DOGEUSDT.P"
+    },
+    {
+      "description": "Solana",
+      "proName": "BYBIT:SOLUSDT.P"
+    },
+    {
+      "description": "Gold",
+      "proName": "FOREXCOM:XAUUSD"
+    },
+    {
+      "description": "Silver",
+      "proName": "FOREXCOM:XAGUSD"
+    },
+    {
+      "description": "S&P500",
+      "proName": "FOREXCOM:SPX500"
+    }
+  ],
+  "showSymbolLogo": true,
+  "isTransparent": true,
+  "displayMode": "adaptive",
+  "colorTheme": "dark",
+  "locale": "en"
+}
+  </script>
+</div>
+<!-- TradingView Widget END -->
+
+<MudContainer Class="pt-8 pb-8">
+    <MudGrid>
+        <MudItem lg="3" xs="12">
+            <MudNavMenu Bordered="true">
+                @foreach (var navigationLink in AppSettings.Value.NavigationLinks)
+                {
+                    if (string.IsNullOrEmpty(navigationLink.Area) || navigationLink.Area != "Members")
+                        continue;
+
+                    if (navigationLink.Children == null)
+                    {
+                        continue;
+                    }
+
+                    foreach (var childNavigationLink in navigationLink.Children)
+                    {
+                        var icon = childNavigationLink.Title switch
+                        {
+                            "Latest Review" => Icons.Material.Filled.NewReleases,
+                            "Market Reviews" => Icons.Material.Filled.Reviews,
+                            "Education" => Icons.Material.Filled.CastForEducation,
+                            "Resources" => Icons.Material.Filled.LibraryBooks,
+                            "Live Trading" => Icons.Material.Filled.LiveTv,
+                            _ => string.Empty
+                        };
+
+                        <MudNavLink Href="@childNavigationLink.Href" Icon="@icon">@childNavigationLink.Title</MudNavLink>
+                    }
+                }
+            </MudNavMenu>
+            <MudDivider Class="mt-5 mb-5"/>
+            <MudNavMenu Bordered="true">
+                <MudNavLink Href="https://discord.gg/mMvwy89szj" Icon="@Icons.Custom.Brands.Discord" Target="_blank">Fight Club Discord</MudNavLink>
+                <MudNavLink Href="https://edgesheet.com/signup?ref=TylerDurden" Icon="@Icons.Material.Filled.Book" Target="_blank">EdgeSheet Journal</MudNavLink>
+                <MudNavLink Href="https://partner.bybit.com/b/FightClub" Icon="@Icons.Material.Filled.CandlestickChart" Target="_blank">Trade Crypto</MudNavLink>
+            </MudNavMenu>
+        </MudItem>
+        <MudItem lg="9" xs="12">
+            @Body
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthState.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity is {IsAuthenticated: true})
+        {
+            var userSubscription = await SubscriptionsService.GetUserSubscription(new GetUserSubscriptionRequest(user.GetUserId()));
+            
+            if (userSubscription == null)
+                NavigationManager.NavigateTo("/account/subscription");
+        }
+    }
+
+}

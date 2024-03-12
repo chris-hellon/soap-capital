@@ -1,0 +1,25 @@
+@page "/free-content/charts"
+
+@inherits ChartsEntityTablePage
+
+@using SoapCapital.Application.Catalog.Charts.Dto
+@using SoapCapital.Application.Catalog.Charts.Queries
+
+@inject IChartsService ChartsService
+
+<PageHeaderTitle Title="Charts" />
+
+<MudContainer Class="pt-8 pb-8" MaxWidth="MaxWidth.Medium">
+    <EntityTable TEntity="ChartDto" EntityList="TableEntities" Fields="TableFields" SearchFunc="SearchCharts" Loading="Loading" />
+</MudContainer>
+
+@code {
+    protected override bool ShowViewButton => true;
+    
+    protected override async Task<Task> OnInitializedAsync()
+    {
+        TableEntities = await ChartsService.GetCharts(new GetChartsRequest(99999));
+
+        return base.OnInitializedAsync();
+    }
+}

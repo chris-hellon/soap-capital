@@ -1,0 +1,118 @@
+@using SoapCapital.Infrastructure.Configuration
+@using Microsoft.Extensions.Options
+
+@implements IDisposable
+
+@inject NavigationManager NavigationManager
+@inject IOptions<AppSettings> AppSettings
+@inject ICurrentUser CurrentUser
+
+<MudAppBar Elevation="25" Fixed="true" Class="@(NavbarService.IsTransparent ? "transparent-app-bar" : "no-transparency")">
+    <div class="d-flex align-center flex-grow-1 d-md-none">
+        <MudButton Href="/" Class="navbarBrand">
+            <MudImage Height="50" Src="https://paperstreetsoap.azureedge.net/site/logo.png"></MudImage>
+        </MudButton>
+        <MudLink Href="/" Class="me-5" Color="Color.Tertiary" Underline="Underline.None" Typo="Typo.h6">
+            Home
+        </MudLink>
+        <AuthorizeView>
+            <Authorized>
+                <MudLink Href="/members/latest-review" Color="Color.Tertiary" Underline="Underline.None" Typo="Typo.h6">
+                    Members Area
+                </MudLink>
+            </Authorized>
+        </AuthorizeView>
+    </div>
+    <div class="d-none d-md-flex align-center flex-grow-1">
+        <MudButton Href="/" Class="navbarBrand me-5">
+            <MudImage Height="50" Src="https://paperstreetsoap.azureedge.net/site/logo.png"></MudImage>
+        </MudButton>
+        @if (AppSettings.Value.NavigationLinks.Any())
+        {
+            <MudLink Href="/" Class="me-5" Color="Color.Tertiary" Underline="Underline.None" Typo="Typo.h6">
+                Home
+            </MudLink>
+
+            <AuthorizeView>
+                <Authorized>
+                    <MudLink Href="/members/latest-review" Color="Color.Tertiary" Underline="Underline.None" Typo="Typo.h6">
+                        Members Area
+                    </MudLink>
+                </Authorized>
+            </AuthorizeView>
+
+            <MudSpacer/>
+
+            @if (AppSettings.Value.SocialLinks.Any())
+            {
+                var userIsSignedIn = CurrentUser.IsAuthenticated();
+
+                foreach (var socialLink in AppSettings.Value.SocialLinks)
+                {
+                    if (socialLink.RequiresAuth.HasValue && socialLink.RequiresAuth.Value)
+                    {
+                        if (!userIsSignedIn)
+                            continue;
+                    }
+
+                    var startIcon = socialLink.IconClass switch
+                    {
+                        "fa-twitter" => Icons.Custom.Brands.Twitter,
+                        "fa-youtube" => Icons.Custom.Brands.YouTube,
+                        "fa-substack" => CustomIcons.SubStack,
+                        "fa-discord" => Icons.Custom.Brands.Discord,
+                        _ => string.Empty
+                    };
+
+                    <MudIconButton Color="@(IsDarkMode ? Color.Tertiary : Color.Dark)" Href="@socialLink.Url" Target="_blank" Icon="@startIcon" Size="Size.Small" Class="@($"{(socialLink != AppSettings.Value.SocialLinks.Last() ? "me-3" : "")}{(socialLink.IconClass == "fa-substack" ? "substack-icon" : "")}")"/>
+                }
+            }
+
+            <AuthorizeView>
+                <Authorized>
+
+                </Authorized>
+                <NotAuthorized>
+                    <MudButton Href="/login" Class="me-5 ms-5" Variant="Variant.Filled" Color="Color.Secondary">Log In</MudButton>
+                    <MudButton Href="/choose-membership" Variant="Variant.Filled" Color="Color.Primary">Sign Up</MudButton>
+                </NotAuthorized>
+            </AuthorizeView>
+        }
+    </div>
+</MudAppBar>
+
+
+@code {
+    private string? currentUrl;
+
+    [Parameter] public bool IsDarkMode { get; set; }
+
+    private string GetActiveClass(string url)
+    {
+        var formattedUrl = url.Split("/");
+        var formattedCurrentUrl = currentUrl != null && currentUrl.Contains("/") ? currentUrl.Split("/")[0] : currentUrl;
+
+        return formattedCurrentUrl == formattedUrl[1] ? "active me-5" : "me-5";
+    }
+
+    protected override void OnInitialized()
+    {
+        currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+        NavigationManager.LocationChanged += OnLocationChanged;
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        currentUrl = NavigationManager.ToBaseRelativePath(e.Location);
+
+        NavbarService.ToggleNavbarTransparency(currentUrl == "");
+
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= OnLocationChanged;
+    }
+
+}

@@ -1,0 +1,59 @@
+﻿@typeparam TRequest
+
+
+<EditForm Model="@RequestModel" OnValidSubmit="SaveAsync" Context="editContext">
+    <MudDialog>
+        <TitleContent>
+            <MudText Typo="Typo.h6">
+                @if (IsCreate)
+                {
+                    <MudIcon Icon="@Icons.Material.Filled.Add" Class="mr-3 mb-n1"/>
+                    @($"Create {EntityName}")
+                }
+                else if (IsView)
+                {
+                    <MudIcon Icon="@Icons.Material.Filled.Update" Class="mr-3 mb-n1"/>
+                    @($"View {EntityName}")
+                }
+                else
+                {
+                    <MudIcon Icon="@Icons.Material.Filled.Update" Class="mr-3 mb-n1"/>
+                    @($"Edit {EntityName}")
+                }
+            </MudText>
+        </TitleContent>
+
+        <DialogContent>
+            <DataAnnotationsValidator/>
+
+            <MudGrid>
+                @if (!IsCreate)
+                {
+                    <MudInput InputType="InputType.Hidden" Value="Id"></MudInput>
+                }
+
+                @EditFormContent(RequestModel)
+            </MudGrid>
+        </DialogContent>
+        <DialogActions>
+            <MudButton DisableElevation Variant="Variant.Filled" OnClick="Cancel" StartIcon="@Icons.Material.Filled.Cancel">Cancel</MudButton>
+
+            @if (SaveFunc is not null)
+            {
+                @if (IsCreate)
+                {
+                    <MudButton DisableElevation Variant="Variant.Filled" Disabled="BusySubmitting" Class="dont-disable" ButtonType="ButtonType.Submit" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Save">
+                        Save
+                    </MudButton>
+                }
+                else
+                {
+                    <MudButton DisableElevation Variant="Variant.Filled" Disabled="BusySubmitting" Class="dont-disable" ButtonType="ButtonType.Submit" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Update">
+                        Update
+                    </MudButton>
+                }
+            }
+        </DialogActions>
+
+    </MudDialog>
+</EditForm>

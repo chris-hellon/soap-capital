@@ -1,0 +1,81 @@
+@using SoapCapital.Application.Catalog.Notifications.Dto
+@using SoapCapital.Application.Catalog.Notifications.Commands
+
+@inject INotificationsService NotificationsService
+
+<MudMenu AnchorOrigin="Origin.BottomRight" ListClass="pa-2 notifications-list" PopoverClass="notifications-popover" LockScroll="true" TransformOrigin="Origin.TopRight">
+    <ActivatorContent>
+        @{
+            if (Notifications != null)
+            {
+                var unreadNotifications = Notifications.Count(x => !x.IsRead);
+
+                if (unreadNotifications > 0)
+                {
+                    <MudBadge Content="@unreadNotifications" Color="Color.Primary" Overlap="true">
+                        <MudIconButton Icon="@Icons.Material.Filled.Email" Color="@(IsDarkMode ? Color.Tertiary : Color.Dark)" Size="Size.Small" Class="ms-3"/>
+                    </MudBadge>
+                }
+                else
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.Email" Color="@(IsDarkMode ? Color.Tertiary : Color.Dark)" Size="Size.Small" Class="ms-3"/>
+                }
+            }
+        }
+    </ActivatorContent>
+    <ChildContent>
+        <div class="d-flex justify-space-between align-center px-2">
+            <MudText Typo="Typo.body1" Style="font-weight: bold;">Notifications</MudText>
+            <MudButton Size="Size.Small" StartIcon="@Icons.Material.Filled.CheckCircle" OnClick="FlagNotificationsAsRead" Style="padding-left: 10px !important; padding-right: 10px !important;" Color="Color.Primary">Mark as read</MudButton>
+        </div>
+        @if (Notifications != null)
+        {
+            foreach (var notification in Notifications)
+            {
+                var currentDate = DateTime.Now;
+                var subscriptionEndDate = notification.CreateDate;
+
+                var diff = currentDate.Date - subscriptionEndDate.Date;
+                var days = diff.Days;
+                string? navigateUrl = null;
+
+                if (!string.IsNullOrEmpty(notification.NavigateUrl))
+                {
+                    navigateUrl = notification.NavigateUrl.Contains("https://paperstreetsoap.io/")
+                        ? notification.NavigateUrl.Replace("https://paperstreetsoap.io/",
+                            NavigationManager.BaseUri)
+                        : notification.NavigateUrl;
+                }
+
+                <MudMenuItem Href="@navigateUrl">
+                    <MudText Typo="Typo.body1">
+                        <MudText Typo="Typo.subtitle1" Color="@(IsDarkMode ? Color.Tertiary : Color.Dark)">
+                            @if (notification.Body != null)
+                            {
+                                @((MarkupString) notification.Body)
+                            }
+                        </MudText>
+                        <MudText Typo="Typo.subtitle2" Color="@(!notification.IsRead ? Color.Primary : IsDarkMode ? Color.Tertiary : Color.Dark)">@notification.CreateDate.ToShortDateString()</MudText>
+                    </MudText>
+                </MudMenuItem>
+                <MudDivider/>
+            }
+        }
+    </ChildContent>
+</MudMenu>
+
+@code {
+    [Parameter] public bool IsDarkMode { get; set; }
+    [Parameter] public IEnumerable<NotificationDto>? Notifications { get; set; }
+    [Parameter] public Func<Task>? GetUserNotifications { get; set;}
+    
+    private async Task FlagNotificationsAsRead(MouseEventArgs obj)
+    {
+        var notificationIds = Notifications?.Where(x => !x.IsRead).Select(x => x.Id!.Value).ToList();
+        if (notificationIds != null) await NotificationsService.FlagNotificationsAsRead(new FlagNotificationsAsReadRequest(notificationIds));
+
+        await GetUserNotifications?.Invoke()!;
+
+        StateHasChanged();
+    }
+}

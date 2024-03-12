@@ -1,0 +1,28 @@
+﻿@using Website.Components.Account.Shared
+@using SoapCapital.Website.Components.Layout
+@using Microsoft.AspNetCore.Http.HttpResults
+
+<Router AppAssembly="@typeof(Program).Assembly">
+    <Found Context="routeData">
+        <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
+            <Authorizing>
+                <text>Please wait, we are authorizing you...</text>
+            </Authorizing>
+            <NotAuthorized>
+                @if (context.User.Identity is {IsAuthenticated: false})
+                {
+                    NavigationManager.NavigateTo($"account/login?returnUrl={Uri.EscapeDataString(NavigationManager.Uri)}", forceLoad: true);
+                }
+                else
+                {
+                    <p>You are not authorized to access this resource.</p>
+                }
+            </NotAuthorized>
+        </AuthorizeRouteView>
+    </Found>
+    <NotFound>
+        <LayoutView Layout="@typeof(NotFound)">
+            <p>Sorry, there's nothing at this address.</p>
+        </LayoutView>
+    </NotFound>
+</Router>

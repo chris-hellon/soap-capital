@@ -1,0 +1,115 @@
+@page "/bybit-login"
+
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using SoapCapital.Application.Bybit
+@using SoapCapital.Application.ByBit.Queries
+@using SoapCapital.Infrastructure.Identity
+
+@inject SignInManager<ApplicationUser> SignInManager
+@inject IdentityRedirectManager RedirectManager
+@inject UserManager<ApplicationUser> UserManager
+@inject IBybitService BybitService
+
+<PageHeaderTitle Title="Log In"/>
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="pt-8">
+    <MudPaper Elevation="25" Class="pa-8">
+        <div class="fsh-center-text">
+            <MudText Typo="Typo.body1" Align="Align.Center">Enter your Bybit Unique User Id to get started.</MudText>
+        </div>
+
+        <MudDivider Class="mt-5 mb-5"></MudDivider>
+
+        <EditForm Model="@Input" method="post" OnValidSubmit="LoginUser" FormName="login">
+            <MudGrid Spacing="1">
+                <DataAnnotationsValidator/>
+                <StatusMessage Message="@_errorMessage"/>
+
+                <MudItem xs="12">
+                    <div class="mud-input-control mud-input-input-control">
+                        <div class="mud-input-control-input-container">
+                            <div class="mud-input mud-input-outlined">
+                                <InputText @bind-Value="Input.BybitUserId" class="mud-input-slot mud-input-root mud-input-root-outlined" autocomplete="username" aria-required="true" placeholder="Bybit User Id"/>
+                                <div class="mud-input-adornment mud-input-adornment-end"></div>
+                                <div class="mud-input-outlined-border"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <ValidationMessage For="() => Input.BybitUserId" class="mud-input-helper-text mud-input-error"/>
+                </MudItem>
+
+
+                <MudItem xs="12" Class="d-flex justify-center">
+                    <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large" StartIcon="@Icons.Material.Filled.Login" Style="width: 100%;">
+                        Sign In
+                    </MudButton>
+                </MudItem>
+            </MudGrid>
+        </EditForm>
+    </MudPaper>
+</MudContainer>
+
+
+@code {
+    private string? _errorMessage;
+
+    [Parameter] public string? BybitUserId { get; set; }
+
+    [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
+
+    [SupplyParameterFromForm]
+    private LoginInputModel Input { get; set; } = new();
+    
+    [SupplyParameterFromQuery] private string? ReturnUrl { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (HttpMethods.IsGet(HttpContext.Request.Method))
+        {
+            // Clear the existing external cookie to ensure a clean login process
+            await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
+        }
+    }
+
+    public async Task LoginUser()
+    {
+        var byBitUser = await BybitService.GetAffiliateUsers(new GetAffiliateUsersRequest(Input.BybitUserId));
+
+        if (byBitUser?.Result != null)
+        {
+            if (byBitUser.Result is {DepositAmount365Day: >= 10})
+            {
+                var user = await UserManager.Users.FirstOrDefaultAsync(x => x.BybitId == Input.BybitUserId);
+
+                if (user != null)
+                {
+                    await SignInManager.SignInAsync(user, Input.RememberMe);
+
+                    if (string.IsNullOrEmpty(ReturnUrl))
+                    {
+                        ReturnUrl = "/members/latest-review";
+                    }
+
+                    RedirectManager.RedirectTo(ReturnUrl);
+                }
+                else
+                {
+                    NavigationManager.NavigateTo($"/bybit-sign-up/{Input.BybitUserId}");
+                }
+            }
+            else  _errorMessage = "Error: You must have deposited at least 10 USDT in your Bybit account to access Soap Capital.";
+        }
+        else _errorMessage = "Error: No Bybit user found with this User Id.";
+    }
+
+    public class LoginInputModel
+    {
+        [Required] public string BybitUserId { get; set; } = "";
+
+        [Display(Name = "Remember me?")] public bool RememberMe { get; set; }
+    }
+}
