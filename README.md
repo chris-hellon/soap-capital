@@ -22,3 +22,6 @@ Soap Capital is a Blazor .NET 8 web application designed to provide cryptocurren
 - **Dapper**: Micro ORM for data access, providing fast database interactions with minimal overhead.
 - **REST API Consumption**: Integrating external APIs to extend application functionality.
 - **Microsoft SQL Server**: Reliable and scalable database management system for storing application data.
+- **Azure Hosting**: The website is hosted on Microsoft Azure for scalability and reliability.
+- **Azure Blob Storage**: Azure Blob Storage is used to serve content, ensuring efficient storage and retrieval of static files.
+- **Azure CDN**: Azure CDN is utilized to deliver content globally with low latency and high transfer speeds.
