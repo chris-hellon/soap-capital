@@ -1,9 +1,11 @@
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using MudBlazor;
 using MudBlazor.Services;
 using MudExtensions.Services;
 using Serilog;
 using SoapCapital.Application;
+using SoapCapital.Application.Common.Interfaces;
 using SoapCapital.Infrastructure;
 using SoapCapital.Infrastructure.Common;
 using SoapCapital.Website.Components;
@@ -80,6 +82,11 @@ try
         .AddInteractiveServerRenderMode();
 
     app.MapAdditionalIdentityEndpoints();
+    
+    app.MapGet("/sitemap.xml",  (
+        HttpContext context,
+        [FromServices] ISitemapService sitemapService) => TypedResults.Content(sitemapService.GenerateSitemap(context), contentType: "application/xml", statusCode: 200)).DisableAntiforgery();
+    
     app.UseStatusCodePagesWithRedirects("/error/{0}");
     
     if (!app.Environment.IsDevelopment())

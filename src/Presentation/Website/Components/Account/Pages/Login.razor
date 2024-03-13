@@ -112,7 +112,7 @@
 
             // Check if the user has an active subscription, if not redirect to subscription page
             var user = await UserManager.FindByNameAsync(Input.Username);
-            var userSubscription = await SubscriptionsService.GetUserSubscription(new GetUserSubscriptionRequest(user.Id));
+            var userSubscription = await SubscriptionsService.GetUserSubscription(new GetUserSubscriptionRequest(user?.Id));
             
             if (userSubscription == null)
                 ReturnUrl = "/account/subscription";

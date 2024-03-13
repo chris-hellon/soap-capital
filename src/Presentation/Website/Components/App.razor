@@ -10,8 +10,10 @@
     <meta property="og:site_name" content="soap.capital"/>
     <meta property="og:image" content="https://paperstreetsoap.azureedge.net/site/soapcapital-social-logo.png"/>
     <meta property="og:type" content="website"/>
+    <meta property="twitter:creator" content="TylerDurden"/>
     <meta property="twitter:card" content="summary_large_image"/>
     <meta property="twitter:image" content="https://paperstreetsoap.azureedge.net/site/soapcapital-social-logo.png"/>
+    <meta property="twitter:image:alt" content="Soap Capital"/>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <meta name="apple-mobile-web-app-title" content="Soap Capital">
@@ -81,7 +83,8 @@ else
                                                                                     || HttpContextAccessor.HttpContext.Request.Path.StartsWithSegments("/open-node-webhook")
                                                                                     || HttpContextAccessor.HttpContext.Request.Path.StartsWithSegments("/login-with-2fa")
                                                                                     || HttpContextAccessor.HttpContext.Request.Path.StartsWithSegments("/sign-up")
-                                                                                    || HttpContextAccessor.HttpContext.Request.Path.StartsWithSegments("/account"));
+                                                                                    || HttpContextAccessor.HttpContext.Request.Path.StartsWithSegments("/account")
+                                                                                    || HttpContextAccessor.HttpContext.Request.Path.StartsWithSegments("/sitemap"));
 
     private IComponentRenderMode? RenderModeForPage => IsServerPage ? null : InteractiveServer;
 }
