@@ -13,7 +13,6 @@
 @inject UserManager<ApplicationUser> UserManager
 @inject IUserStore<ApplicationUser> UserStore
 @inject SignInManager<ApplicationUser> SignInManager
-@inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
 @inject IPackagesService PackagesService
 @inject IOrdersService OrdersService
@@ -25,9 +24,6 @@
 
 <MudContainer MaxWidth="MaxWidth.Small" Class="pt-8">
     <MudPaper Elevation="25" Class="pa-8 w-100">
-        @* <div class="d-flex justify-center"> *@
-        @*     <MudImage Src="https://paperstreetsoap.azureedge.net/site/logo.png" Height="120"/> *@
-        @* </div> *@
         <div class="fsh-center-text">
             @if (Package != null)
             {
@@ -182,6 +178,8 @@
                     await SubscriptionsService.CreateSubscription(new CreateSubscriptionRequest(user.Id, Package.Id, orderId));
                     await NotificationsService.CreateNotification(new CreateNotificationRequest($"Welcome to Soap Capital. You have successfully signed up from Bybit, and have access to our {Package.Title} for {Package.Duration} {Package.DurationType}{(Package.Duration > 1 ? "s" : "")}.", null, false, user.Id));
 
+                    Logger.Information("ByBit user with ByBitId {BybitUserId} has successfully signed up", BybitUserId);
+                    
                     RedirectManager.RedirectTo("/members/latest-review");
                 }
             }

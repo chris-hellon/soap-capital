@@ -3,12 +3,15 @@
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Authentication
 @using Microsoft.AspNetCore.Identity
+@using SoapCapital.Application.Catalog.Subscriptions.Queries
 @using SoapCapital.Infrastructure.Identity
 
 @inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
 @inject ILogger<Login> Logger
 @inject IdentityRedirectManager RedirectManager
 @inject ICurrentUser CurrentUser
+@inject ISubscriptionsService SubscriptionsService
 
 <PageHeaderTitle Title="Log In"/>
 
@@ -102,13 +105,20 @@
         var result = await SignInManager.PasswordSignInAsync(Input.Username, Input.Password, Input.RememberMe, lockoutOnFailure: false);
         if (result.Succeeded)
         {
-            Logger.LogInformation("User logged in.");
-
             if (string.IsNullOrEmpty(ReturnUrl))
             {
                 ReturnUrl = "/members/latest-review";
             }
 
+            // Check if the user has an active subscription, if not redirect to subscription page
+            var user = await UserManager.FindByNameAsync(Input.Username);
+            var userSubscription = await SubscriptionsService.GetUserSubscription(new GetUserSubscriptionRequest(user.Id));
+            
+            if (userSubscription == null)
+                ReturnUrl = "/account/subscription";
+            
+            Logger.LogInformation("User with ID '{UserId}' logged in", user.Id);
+            
             RedirectManager.RedirectTo(ReturnUrl);
         }
         else if (result.RequiresTwoFactor)
@@ -119,7 +129,7 @@
         }
         else if (result.IsLockedOut)
         {
-            Logger.LogWarning("User account locked out.");
+            Logger.LogWarning("User account locked out");
             RedirectManager.RedirectTo("Account/Lockout");
         }
         else

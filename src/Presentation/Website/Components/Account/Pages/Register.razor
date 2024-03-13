@@ -8,12 +8,14 @@
 @using SoapCapital.Application.Catalog.Orders.Commands
 @using SoapCapital.Application.Catalog.Packages.Dto
 @using SoapCapital.Application.Catalog.Packages.Queries
+@using SoapCapital.Application.Catalog.Subscriptions.Queries
 @using SoapCapital.Application.Common.Extensions
 @using SoapCapital.Application.OpenNode
 @using SoapCapital.Application.OpenNode.Commands
 @using SoapCapital.Application.Stripe
 @using SoapCapital.Application.Stripe.Commands
 @using SoapCapital.Infrastructure.Identity
+@using SoapCapital.Shared.Authorization
 
 @inject UserManager<ApplicationUser> UserManager
 @inject IUserStore<ApplicationUser> UserStore
@@ -25,6 +27,7 @@
 @inject IOpenNodeService OpenNodeService
 @inject IStripeService StripeService
 @inject INotificationsService NotificationsService
+@inject ISubscriptionsService SubscriptionsService
 
 <PageHeaderTitle Title="Sign Up"/>
 
@@ -177,7 +180,10 @@
 
         var authState = await AuthState.GetAuthenticationStateAsync();
         if (authState.User.Identity is {IsAuthenticated: true})
-            NavigationManager.NavigateTo("/members/latest-review");
+        {
+            var userSubscription = await SubscriptionsService.GetUserSubscription(new GetUserSubscriptionRequest(authState.User.GetUserId()));
+            NavigationManager.NavigateTo(userSubscription != null ? "/members/latest-review" : "/account/subscription");
+        }
 
         var packages = await PackagesService.GetPackages(new GetPackagesRequest(false));
 

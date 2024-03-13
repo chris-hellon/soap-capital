@@ -1,11 +1,15 @@
 @using SoapCapital.Infrastructure.Configuration
 @using Microsoft.Extensions.Options
+@using SoapCapital.Application.Catalog.Subscriptions.Dto
+@using SoapCapital.Application.Catalog.Subscriptions.Queries
+@using SoapCapital.Shared.Authorization
 
 @implements IDisposable
 
 @inject NavigationManager NavigationManager
 @inject IOptions<AppSettings> AppSettings
 @inject ICurrentUser CurrentUser
+@inject ISubscriptionsService SubscriptionsService
 
 <MudAppBar Elevation="25" Fixed="true" Class="@(NavbarService.IsTransparent ? "transparent-app-bar" : "no-transparency")">
     <div class="d-flex align-center flex-grow-1 d-md-none">
@@ -17,9 +21,18 @@
         </MudLink>
         <AuthorizeView>
             <Authorized>
-                <MudLink Href="/members/latest-review" Color="Color.Tertiary" Underline="Underline.None" Typo="Typo.h6">
-                    Members Area
-                </MudLink>
+                @if (UserSubscription != null)
+                {
+                    <MudLink Href="/members/latest-review" Color="Color.Tertiary" Underline="Underline.None" Typo="Typo.h6">
+                        Members Area
+                    </MudLink>
+                }
+                else
+                {
+                    <MudLink Href="/account/subscription" Color="Color.Tertiary" Underline="Underline.None" Typo="Typo.h6">
+                        Subscription
+                    </MudLink>
+                }
             </Authorized>
         </AuthorizeView>
     </div>
@@ -35,9 +48,18 @@
 
             <AuthorizeView>
                 <Authorized>
-                    <MudLink Href="/members/latest-review" Color="Color.Tertiary" Underline="Underline.None" Typo="Typo.h6">
-                        Members Area
-                    </MudLink>
+                    @if (UserSubscription != null)
+                    {
+                        <MudLink Href="/members/latest-review" Color="Color.Tertiary" Underline="Underline.None" Typo="Typo.h6">
+                            Members Area
+                        </MudLink>
+                    }
+                    else
+                    {
+                        <MudLink Href="/account/subscription" Color="Color.Tertiary" Underline="Underline.None" Typo="Typo.h6">
+                            Subscription
+                        </MudLink>
+                    }
                 </Authorized>
             </AuthorizeView>
 
@@ -83,29 +105,39 @@
 
 
 @code {
-    private string? currentUrl;
+    private string? _currentUrl;
 
     [Parameter] public bool IsDarkMode { get; set; }
+    private SubscriptionDto? UserSubscription { get; set; }
 
     private string GetActiveClass(string url)
     {
         var formattedUrl = url.Split("/");
-        var formattedCurrentUrl = currentUrl != null && currentUrl.Contains("/") ? currentUrl.Split("/")[0] : currentUrl;
+        var formattedCurrentUrl = _currentUrl != null && _currentUrl.Contains("/") ? _currentUrl.Split("/")[0] : _currentUrl;
 
         return formattedCurrentUrl == formattedUrl[1] ? "active me-5" : "me-5";
     }
 
     protected override void OnInitialized()
     {
-        currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+        _currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
         NavigationManager.LocationChanged += OnLocationChanged;
+
+        var authState = AuthState.GetAuthenticationStateAsync();
+
+        if (authState.Result.User.Identity is not {IsAuthenticated: true}) return;
+
+        var userId = authState.Result.User.GetUserId();
+        var userSubscription = Task.Run(() => SubscriptionsService.GetUserSubscription(new GetUserSubscriptionRequest(userId)));
+
+        UserSubscription = userSubscription.Result;
     }
 
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
     {
-        currentUrl = NavigationManager.ToBaseRelativePath(e.Location);
+        _currentUrl = NavigationManager.ToBaseRelativePath(e.Location);
 
-        NavbarService.ToggleNavbarTransparency(currentUrl == "");
+        NavbarService.ToggleNavbarTransparency(_currentUrl == "");
 
         StateHasChanged();
     }
