@@ -7,6 +7,10 @@
         <UserSecretsId>aspnet-Website-164D4ED5-FA73-4C7A-B4B2-0DC3A585C28D</UserSecretsId>
         <AssemblyName>SoapCapital.Website</AssemblyName>
         <RootNamespace>SoapCapital.Website</RootNamespace>
+        <Title>Soap Capital</Title>
+        <Description>Soap Capital is a Blazor .NET 8 web application designed to provide cryptocurrency trading resources.</Description>
+        <PackageProjectUrl>https://soap.capital</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/chris-hellon/soap-capital</RepositoryUrl>
     </PropertyGroup>
 
     <ItemGroup>

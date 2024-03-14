@@ -1,0 +1,51 @@
+{
+  "lang": "en",
+  "dir": "ltr",
+  "name": "Soap Capital",
+  "short_name": "Soap Capital",
+  "description": "The first rule of Soap Capital is: you do not talk about Soap Capital...",
+  "icons": [{
+    "src": "img/soapcapital_64.png",
+    "sizes": "64x64",
+    "type": "image/png"
+  }, {
+    "src": "img/soapcapital_128.png",
+    "sizes": "128x128",
+    "type": "image/png"
+  },
+  {
+      "src": "img/soapcapital_192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+        "src": "img/soapcapital_399.png",
+        "sizes": "399x399",
+        "type": "image/png",
+        "purpose": "any"
+      }],
+      "screenshots" : [
+        {
+          "src": "img/desktop_screenshot.png",
+          "sizes": "1280x568",
+          "type": "image/png",
+          "form_factor": "wide",
+          "label": "Desktop Homescreen of Soap Capital"
+        },
+        {
+          "src": "img/mobile_screenshot.png",
+          "sizes": "489x847",
+          "type": "image/png",
+          "form_factor": "narrow",
+          "label": "Mobile Homescreen of Soap Capital"
+        }
+      ],
+  "scope": "/",
+  "id": "/",
+  "start_url": "/",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "theme_color": "#e78223",
+  "background_color": "#1b1f22"
+}
