@@ -13,5 +13,7 @@ public class ApplicationUser : IdentityUser
     public string? DiscordUsername { get; set; }
     
     public string? BybitId { get; set; }
+    
+    public string? TyrelPublicKey { get; set; }
 }
 

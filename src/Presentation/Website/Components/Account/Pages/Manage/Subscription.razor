@@ -38,6 +38,27 @@
         <MudCardContent>
             <MudDivider Class="mb-5"/>
 
+            @if (UserSubscription == null)
+            {
+                <MudText Class="mb-5">You currently have no active subscriptions.</MudText>
+                
+                if (User != null && !string.IsNullOrEmpty(User.TyrelPublicKey))
+                {
+                    <MudText Class="mb-5">
+                        You must have at least 420,000 in your wallet to gain access.
+                    </MudText>
+                    <MudText Class="mb-5">
+                        Ensure you have the required amount, and then sign back in.
+                    </MudText>
+                }
+                else
+                {
+                    <MudText Class="mb-5">
+                        To gain access, renew your subscription using the link below.
+                    </MudText>
+                }
+            }
+            
             @if (OutstandingOrder != null)
             {
                 <MudText Class="mb-5">You currently have an outstanding order for <span class="mud-primary-text fw-bold">@Package.Title</span>.</MudText>
@@ -85,7 +106,11 @@
         </MudCardContent>
         <MudCardActions>
             <div class="d-flex justify-space-between flex-grow-1">
-                @if (GetChargeInfoResponse != null && GetChargeInfoResponse.Data?.Status == "unpaid")
+                @if (UserSubscription == null && User != null && string.IsNullOrEmpty(User.TyrelPublicKey))
+                {
+                    <MudButton Href="/choose-membership" Variant="Variant.Filled" Color="Color.Secondary" Size="Size.Small" StartIcon="@Icons.Material.Filled.Create">Select Package</MudButton>
+                }
+                @if (GetChargeInfoResponse is {Data.Status: "unpaid"})
                 {
                     <EditForm Model="OutstandingOrder" FormName="create-bitcoin-order" OnValidSubmit="CreateNewBitcoinOrder" method="post">
                         <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" StartIcon="@Icons.Material.Filled.Login">
@@ -105,7 +130,9 @@
                     {
                         <MudButton Href="/choose-membership/renew" StartIcon="@Icons.Material.Filled.OpenInNew" Variant="Variant.Filled" Color="Color.Secondary" Size="Size.Small">Renew Subscription</MudButton>
                     }
-                    else {if (UserSubscription != null && UserSubscription.PackageId != 3)
+                    else
+                    {
+                        if (UserSubscription != null && UserSubscription.PackageId != 3)
                         {
                             <MudButton Href="/choose-membership/upgrade" StartIcon="@Icons.Material.Filled.Upgrade" Variant="Variant.Filled" Color="Color.Secondary" Size="Size.Small">Upgrade Subscription</MudButton>
                         }
@@ -128,11 +155,13 @@
     private PackageDto? Package { get; set; }
     private GetChargeInfoResponseDto? GetChargeInfoResponse { get; set; }
     private Session? StripePaymentSession { get; set; }
-    private ApplicationUser? user { get; set; }
+    private ApplicationUser? User { get; set; }
     [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
 
     protected override async Task OnInitializedAsync()
     {
+        User = await UserAccessor.GetRequiredUserAsync(HttpContext);
+        
         var userId = CurrentUser.GetUserId().ToString();
         UserSubscription = await SubscriptionsService.GetUserSubscription(new GetUserSubscriptionRequest(userId));
 
@@ -177,16 +206,14 @@
         {
             var successUrl = $"{NavigationManager.BaseUri}account/my-orders/order-status/{OutstandingOrder.Id}";
             var webhookUrl = $"{NavigationManager.BaseUri}open-node-webhook/{OutstandingOrder.Id}";
-
-            user = await UserAccessor.GetRequiredUserAsync(HttpContext);
-
+            
             var createChargeResponse = await OpenNodeService.CreateOpenNodeCharge(new CreateOpenNodeChargeRequest(
                 Package.Title!,
                 Package.Price!,
                 OutstandingOrder.Id,
-                user.UserName!,
-                user.Email!,
-                user.Email!,
+                User?.UserName!,
+                User?.Email!,
+                User?.Email!,
                 successUrl,
                 webhookUrl));
 

@@ -3,7 +3,11 @@
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Authentication
 @using Microsoft.AspNetCore.Identity
+@using SoapCapital.Application.Catalog.Orders.Commands
+@using SoapCapital.Application.Catalog.Subscriptions.Commands
 @using SoapCapital.Application.Catalog.Subscriptions.Queries
+@using SoapCapital.Application.Solana
+@using SoapCapital.Application.Solana.Queries
 @using SoapCapital.Infrastructure.Identity
 
 @inject SignInManager<ApplicationUser> SignInManager
@@ -12,6 +16,8 @@
 @inject IdentityRedirectManager RedirectManager
 @inject ICurrentUser CurrentUser
 @inject ISubscriptionsService SubscriptionsService
+@inject IOrdersService OrdersService
+@inject ISolanaService SolanaService
 
 <PageHeaderTitle Title="Log In"/>
 
@@ -116,8 +122,36 @@
             
             if (userSubscription == null)
                 ReturnUrl = "/account/subscription";
+
+            if (!string.IsNullOrEmpty(user?.TyrelPublicKey))
+            {
+                try
+                {
+                    var tyrelUser = await SolanaService.GetTyrelBalance(new GetTyrelBalanceRequest(user.TyrelPublicKey));
+
+                    if (!tyrelUser.Success)
+                    {
+                        if (userSubscription != null)
+                            await SubscriptionsService.DeleteSubscription(new DeleteSubscriptionRequest(userSubscription.Id));
+                    
+                        ReturnUrl = "/account/subscription";
+                    }
+                    else if (userSubscription == null)
+                    {
+                        var orderId = await OrdersService.CreateOrder(new CreateOrderRequest(6, 0, user.Id, true));
+                        await SubscriptionsService.CreateSubscription(new CreateSubscriptionRequest(user.Id, 6, orderId));
+                    }
+                }
+                catch (Exception)
+                {
+                    if (userSubscription != null)
+                        await SubscriptionsService.DeleteSubscription(new DeleteSubscriptionRequest(userSubscription.Id));
+                    
+                    ReturnUrl = "/account/subscription";
+                }
+            }
             
-            Logger.LogInformation("User with ID '{UserId}' logged in", user.Id);
+            Logger.LogInformation("User with ID '{UserId}' logged in", user?.Id);
             
             RedirectManager.RedirectTo(ReturnUrl);
         }

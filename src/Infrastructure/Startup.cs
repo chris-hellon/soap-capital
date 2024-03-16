@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using SoapCapital.Application.Solana.Wallet;
 using SoapCapital.Infrastructure.Auth;
 using SoapCapital.Infrastructure.Bybit;
 using SoapCapital.Infrastructure.Caching;
@@ -18,6 +19,7 @@ using SoapCapital.Infrastructure.Middleware;
 using SoapCapital.Infrastructure.OpenNode;
 using SoapCapital.Infrastructure.Persistence;
 using SoapCapital.Infrastructure.Persistence.Context;
+using SoapCapital.Infrastructure.Solana.Wallet;
 using SoapCapital.Infrastructure.Stripe;
 
 namespace SoapCapital.Infrastructure;
@@ -80,7 +82,9 @@ public static class Startup
             .AddEntityFrameworkStores<ApplicationDbContext>();
 
         services.AddServices();
-
+        services.AddSingleton<IWalletService, WalletService>();
+        services.AddSingleton(s => new AppState());
+        
         return services;
     }
 

@@ -1,21 +1,26 @@
+@using SoapCapital.Application.Catalog.Subscriptions.Dto
 <MudMenu AnchorOrigin="Origin.BottomRight" LockScroll="true" PopoverClass="" TransformOrigin="Origin.TopRight">
     <ActivatorContent>
         <MudIconButton Class="user-profile-icon" Icon="@Icons.Material.Filled.Person" Color="@(IsDarkMode ? Color.Tertiary : Color.Dark)"/>
     </ActivatorContent>
     <ChildContent>
         <div class="py-2" style="min-width: 220px">
-            <MudMenuItem Href="/account/subscription">
-                <div class="d-flex">
-                    <MudIcon Class="mx-2" Icon="@Icons.Material.Filled.Settings"/>
-                    <MudText>Subscription</MudText>
-                </div>
-            </MudMenuItem>
-            <MudMenuItem Href="/account/profile">
-                <div class="d-flex">
-                    <MudIcon Class="mx-2" Icon="@Icons.Material.Filled.Person"/>
-                    <MudText>Account</MudText>
-                </div>
-            </MudMenuItem>
+            @if (UserSubscription != null && UserSubscription.PackageId != 6)
+            {
+                <MudMenuItem Href="/account/subscription">
+                    <div class="d-flex">
+                        <MudIcon Class="mx-2" Icon="@Icons.Material.Filled.Settings"/>
+                        <MudText>Subscription</MudText>
+                    </div>
+                </MudMenuItem>
+                <MudMenuItem Href="/account/profile">
+                    <div class="d-flex">
+                        <MudIcon Class="mx-2" Icon="@Icons.Material.Filled.Person"/>
+                        <MudText>Account</MudText>
+                    </div>
+                </MudMenuItem>
+            }
+
             <div class="mt-4 mx-4">
                 <MudButton Color="Color.Primary" FullWidth="true" StartIcon="@Icons.Material.Filled.Logout"
                            Variant="Variant.Filled" OnClick="Logout">
@@ -28,7 +33,8 @@
 
 @code {
     [Parameter] public bool IsDarkMode { get; set; }
-
+    [Parameter] public SubscriptionDto? UserSubscription { get; set; }
+    
     private void Logout()
     {
         var parameters = new DialogParameters

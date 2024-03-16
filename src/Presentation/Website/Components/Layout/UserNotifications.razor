@@ -75,7 +75,5 @@
         if (notificationIds != null) await NotificationsService.FlagNotificationsAsRead(new FlagNotificationsAsReadRequest(notificationIds));
 
         await GetUserNotifications?.Invoke()!;
-
-        StateHasChanged();
     }
 }

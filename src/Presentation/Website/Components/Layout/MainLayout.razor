@@ -11,7 +11,7 @@
 
 <MudThemeProvider Theme="_currentTheme"/>
 <MudDialogProvider/>
-<MudSnackbarProvider/>
+<MudSnackbarProvider Style="z-index: 30000000000;"/>
 
 <MudOverlay Visible="@LoadingService.LoaderVisible" DarkBackground="true" Absolute="false" Style="z-index: 40000000000">
     <MudProgressCircular Color="Color.Primary" Indeterminate="true"/>

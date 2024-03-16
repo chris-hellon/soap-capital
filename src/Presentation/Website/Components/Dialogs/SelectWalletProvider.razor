@@ -1,0 +1,97 @@
+@inject IJSRuntime JsRuntime
+@inject IWalletService WalletService
+@inject ISolanaService SolanaService
+@inject AppState AppState
+
+@using SoapCapital.Infrastructure.Solana.Wallet
+@using SoapCapital.Application.Solana.Wallet
+@using SoapCapital.Application.Solana
+@using SoapCapital.Application.Solana.Queries
+
+@implements IDisposable
+
+<MudDialog>
+    <DialogContent>
+        @if (Connecting)
+        {
+            <MudText>Connecting...</MudText>
+        }
+        else
+        {
+            @if (Adapters != null)
+            {
+                <MudGrid>
+                    @foreach (var adapter in Adapters)
+                    {
+                        <MudItem lg="12" xs="12">
+                            <MudButton @onclick="@(() => SelectAdapter(adapter.Name))" FullWidth="true" Class="d-flex justify-center align-center">
+                                <MudImage Class="me-3" Src="@adapter.IconUrl" Height="25" Width="25" Alt="@adapter.Name"></MudImage>
+                                <MudText  Typo="Typo.body1">@adapter.Name</MudText>
+                            </MudButton>
+                        </MudItem>
+                    }
+                </MudGrid>
+            }
+        }
+    </DialogContent>
+</MudDialog>
+
+@code {
+
+    [CascadingParameter] MudDialogInstance? MudDialog { get; set; }
+
+    [Parameter] public List<IWalletProvider>? Adapters { get; set; }
+
+    private bool Connecting { get; set; }
+    private IWalletProvider? WalletProvider { get; set; }
+
+    protected override void OnInitialized()
+    {
+        AppState.OnChange += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        if (WalletProvider != null)
+        {
+            WalletProvider.OnConnected -= OnConnected;
+        }
+
+        AppState.OnChange -= StateHasChanged;
+    }
+
+    private async void SelectAdapter(string adapterName)
+    {
+        //Connecting = true;
+        if (Adapters != null) WalletProvider = Adapters.FirstOrDefault(adapter => adapter.Name == adapterName);
+        if (WalletProvider == null)
+        {
+            //Connecting = false;
+            return;
+        }
+
+        await WalletProvider.Load(JsRuntime);
+        WalletProvider.OnConnected += OnConnected;
+        await WalletProvider.Connect();
+    }
+
+    private void OnConnected()
+    {
+        Snackbar.Add($"Connected to provider. Account: {WalletProvider?.PublicKey}", Severity.Success);
+        if (WalletProvider != null)
+        {
+            WalletService.SetProvider(WalletProvider);
+
+            var hasTyrelBalanceRequest = Task.Run(() => ServiceHelper.ExecuteCallGuardedAsync(() => SolanaService.GetTyrelBalance(new GetTyrelBalanceRequest(WalletProvider.PublicKey)), Snackbar, Logger));
+
+            if (hasTyrelBalanceRequest.Result is {Success: true})
+            {
+                NavigationManager.NavigateTo($"/tyrel-login/{WalletProvider.PublicKey}");
+            }
+        }
+
+        Cancel();
+    }
+
+    void Cancel() => MudDialog?.Cancel();
+}

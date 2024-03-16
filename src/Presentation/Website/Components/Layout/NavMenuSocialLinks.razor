@@ -24,7 +24,7 @@
 
         if (socialLink.IconClass == "fa-discord")
         {
-            if (UserSubscription != null && UserSubscription.PackageId != 5)
+            if (UserSubscription != null && UserSubscription.PackageId != 5 && UserSubscription.PackageId != 6)
             {
                 <MudIconButton Color="@(IsDarkMode ? Color.Tertiary : Color.Dark)" Href="@socialLink.Url" Target="_blank" Icon="@startIcon" Size="Size.Small" Class="@($"{(socialLink != AppSettings.Value.SocialLinks.Last() ? "me-3" : "")}{(socialLink.IconClass == "fa-substack" ? "substack-icon" : "")}")"/>
             }

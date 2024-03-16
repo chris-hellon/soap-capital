@@ -1,5 +1,6 @@
 @using SoapCapital.Infrastructure.Configuration
 @using Microsoft.Extensions.Options
+@using SoapCapital.Application.Catalog.Subscriptions.Dto
 @using SoapCapital.Application.Catalog.Subscriptions.Queries
 @using SoapCapital.Shared.Authorization
 
@@ -13,8 +14,8 @@
 
 <!-- TradingView Widget BEGIN -->
 <div class="tradingview-widget-container">
-  <div class="tradingview-widget-container__widget"></div>
-  <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js" async>
+    <div class="tradingview-widget-container__widget"></div>
+    <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js" async>
   {
   "symbols": [
     {
@@ -88,7 +89,11 @@
             </MudNavMenu>
             <MudDivider Class="mt-5 mb-5"/>
             <MudNavMenu Bordered="true">
-                <MudNavLink Href="https://discord.gg/mMvwy89szj" Icon="@Icons.Custom.Brands.Discord" Target="_blank">Fight Club Discord</MudNavLink>
+                @if (UserSubscription != null && UserSubscription.PackageId != 5 && UserSubscription.PackageId != 6)
+                {
+                    <MudNavLink Href="https://discord.gg/mMvwy89szj" Icon="@Icons.Custom.Brands.Discord" Target="_blank">Fight Club Discord</MudNavLink>
+                }
+
                 <MudNavLink Href="https://edgesheet.com/signup?ref=TylerDurden" Icon="@Icons.Material.Filled.Book" Target="_blank">EdgeSheet Journal</MudNavLink>
                 <MudNavLink Href="https://partner.bybit.com/b/FightClub" Icon="@Icons.Material.Filled.CandlestickChart" Target="_blank">Trade Crypto</MudNavLink>
             </MudNavMenu>
@@ -100,6 +105,8 @@
 </MudContainer>
 
 @code {
+    private SubscriptionDto? UserSubscription { get; set; }
+    
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthState.GetAuthenticationStateAsync();
@@ -107,9 +114,9 @@
 
         if (user.Identity is {IsAuthenticated: true})
         {
-            var userSubscription = await SubscriptionsService.GetUserSubscription(new GetUserSubscriptionRequest(user.GetUserId()));
-            
-            if (userSubscription == null)
+            UserSubscription = await SubscriptionsService.GetUserSubscription(new GetUserSubscriptionRequest(user.GetUserId()));
+
+            if (UserSubscription == null)
                 NavigationManager.NavigateTo("/account/subscription");
         }
     }

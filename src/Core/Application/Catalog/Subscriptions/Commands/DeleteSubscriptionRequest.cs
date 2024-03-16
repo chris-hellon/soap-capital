@@ -5,6 +5,11 @@ namespace SoapCapital.Application.Catalog.Subscriptions.Commands;
 public class DeleteSubscriptionRequest : IRequest
 {
     public int? Id { get; set; }
+
+    public DeleteSubscriptionRequest(int? id)
+    {
+        Id = id;
+    }
 }
 
 internal class DeleteSubscriptionRequestHandler : IRequestHandler<DeleteSubscriptionRequest>
