@@ -103,7 +103,7 @@ footer .mud-link {
 }
 
 .mud-appbar .mud-link.active, .nav-bar-dropdown.active .mud-button,
-.mud-appbar .mud-button:hover,
+.mud-appbar .tyrel-wallet-connect:hover,
 .mud-appbar .mud-link:hover, .transparent-app-bar .nav-bar-dropdown .mud-button:hover, footer .mud-link:hover, .mud-appbar .mud-icon-button-size-small:hover, .user-profile-icon:hover,
 .mud-appbar .mud-link:focus, .transparent-app-bar .nav-bar-dropdown .mud-button:focus, footer .mud-link:focus, .mud-appbar .mud-icon-button-size-small:focus, .user-profile-icon:focus,
 .mud-appbar .mud-link:active, .transparent-app-bar .nav-bar-dropdown .mud-button:active, footer .mud-link:active, .mud-appbar .mud-icon-button-size-small:active, .user-profile-icon:active,

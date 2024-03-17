@@ -34,12 +34,19 @@ internal class GetTyrelBalanceRequestHandler : IRequestHandler<GetTyrelBalanceRe
         if (tyrelPackage != null)
             amountToOwn = tyrelPackage.Price;
         
-        var client = ClientFactory.GetClient(Cluster.MainNet);
+        var client = ClientFactory.GetClient("https://mainnet.helius-rpc.com/?api-key=6374061a-1548-4055-a2a2-073154e2b11c");
         var tokenAccounts = await client.GetTokenAccountsByOwnerAsync(ownerPubKey: request.PublicKey,
             tokenMintPubKey: "6tHCkrCTyqZQfyG9B73HFKcjixQSi3ezWW5E4sfc7UxT");
 
         if (!tokenAccounts.WasSuccessful)
-            throw new CustomException(tokenAccounts.Reason, tokenAccounts.ErrorData.Logs.ToList(), tokenAccounts.HttpStatusCode);
+        {
+            client = ClientFactory.GetClient(Cluster.MainNet);
+            tokenAccounts = await client.GetTokenAccountsByOwnerAsync(ownerPubKey: request.PublicKey,
+                tokenMintPubKey: "6tHCkrCTyqZQfyG9B73HFKcjixQSi3ezWW5E4sfc7UxT");
+            
+            if (!tokenAccounts.WasSuccessful)
+                throw new CustomException(tokenAccounts.Reason, null, tokenAccounts.HttpStatusCode);
+        }
 
         if (tokenAccounts.Result.Value.Count == 0)
             throw new NotFoundException($"No Tyrel token founds in this wallet. You must have at least {amountToOwn:N0} $tyrel to sign up.");

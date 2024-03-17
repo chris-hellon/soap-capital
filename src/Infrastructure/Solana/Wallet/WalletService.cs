@@ -25,9 +25,15 @@ public class WalletService : IWalletService
         return null;
     }
 
+    public void SetAuthKey(Guid authKey)
+    {
+        AuthKey = authKey.ToString();
+    }
+
     public PublicKey? PublicKey => SelectedProvider?.PublicKey;
     public List<IWalletProvider> WalletProviders => WalletAdapters.Adapters;
     public IWalletProvider? SelectedProvider { get; set; }
-        
+    public string? AuthKey { get; set; }    
+    
     public event Action? OnConnected;
 }

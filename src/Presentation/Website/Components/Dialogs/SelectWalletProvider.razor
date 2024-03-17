@@ -86,7 +86,9 @@
 
             if (hasTyrelBalanceRequest.Result is {Success: true})
             {
-                NavigationManager.NavigateTo($"/tyrel-login/{WalletProvider.PublicKey}");
+                var authKey = Guid.NewGuid();
+                WalletService.SetAuthKey(authKey);
+                NavigationManager.NavigateTo($"/tyrel-login/{WalletProvider.PublicKey}/{authKey}");
             }
         }
 

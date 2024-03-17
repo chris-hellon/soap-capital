@@ -1,4 +1,4 @@
-@page "/tyrel-login/{PublicKey?}"
+@page "/tyrel-login/{PublicKey?}/{AuthKey?}"
 
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Authentication
@@ -7,39 +7,28 @@
 @using SoapCapital.Application.Catalog.Notifications.Commands
 @using SoapCapital.Application.Catalog.Orders.Commands
 @using SoapCapital.Application.Catalog.Subscriptions.Commands
-@using SoapCapital.Application.Catalog.Subscriptions.Queries
-@using SoapCapital.Application.Solana
-@using SoapCapital.Application.Solana.Dto
-@using SoapCapital.Application.Solana.Queries
+@using SoapCapital.Application.Solana.Wallet
 @using SoapCapital.Infrastructure.Identity
 
 @inject SignInManager<ApplicationUser> SignInManager
-@inject IdentityRedirectManager RedirectManager
 @inject UserManager<ApplicationUser> UserManager
 @inject IUserStore<ApplicationUser> UserStore
 @inject IPackagesService PackagesService
-@inject ISolanaService SolanaService
 @inject ISubscriptionsService SubscriptionsService
 @inject IOrdersService OrdersService
 @inject INotificationsService NotificationsService
+@inject IWalletService WalletService
 
 <PageHeaderTitle Title="Log In"/>
-
-@if (OkToSignIn)
-{
-    <RedirectTyrelUser/>
-}
 
 @code {
     [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
 
     [SupplyParameterFromForm] private LoginInputModel Input { get; set; } = new();
 
-    [SupplyParameterFromQuery] private string? ReturnUrl { get; set; }
-
     [SupplyParameterFromQuery] [Parameter] public string? PublicKey { get; set; }
-
-    private bool OkToSignIn { get; set; }
+    
+    [SupplyParameterFromQuery] [Parameter] public string? AuthKey { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -49,92 +38,64 @@
             await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
         }
 
-        if (!string.IsNullOrEmpty(PublicKey))
+        if (!string.IsNullOrEmpty(PublicKey) && !string.IsNullOrEmpty(AuthKey))
         {
             Input.PublicKey = PublicKey;
             await LoginUser();
         }
+        else NavigationManager.NavigateTo("/", forceLoad: false);
     }
 
     private async Task LoginUser()
     {
-        TyrelBalanceDto? tyrelUser = null;
-
-        try
-        {
-            tyrelUser = await SolanaService.GetTyrelBalance(new GetTyrelBalanceRequest(PublicKey));
-        }
-        catch (Exception ex)
-        {
-            Logger.Error(ex.Message);
+        if (WalletService.AuthKey != AuthKey)
             NavigationManager.NavigateTo("/", forceLoad: false);
-        }
+        
+        var user = await UserManager.Users.FirstOrDefaultAsync(x => x.TyrelPublicKey == Input.PublicKey);
 
-        if (tyrelUser is {Success: true})
+        if (user == null)
         {
-            var user = await UserManager.Users.FirstOrDefaultAsync(x => x.TyrelPublicKey == Input.PublicKey);
+            // Create a dummy user
+            user = CreateUser();
 
-            if (user == null)
+            user.SignUpDate = DateTime.Now;
+            user.TyrelPublicKey = PublicKey;
+            user.EmailSubscribed = false;
+
+            await UserStore.SetUserNameAsync(user, Input.PublicKey, CancellationToken.None);
+            var emailStore = GetEmailStore();
+            await emailStore.SetEmailAsync(user, $"{Input.PublicKey}@soap.capital", CancellationToken.None);
+            var result = await UserManager.CreateAsync(user, "P@55w0rd");
+
+            if (!result.Succeeded)
             {
-                // Create a dummy user
-                user = CreateUser();
+                return;
+            }
 
-                user.SignUpDate = DateTime.Now;
-                user.TyrelPublicKey = PublicKey;
-                user.EmailSubscribed = false;
+            var package = await PackagesService.GetPackage(6);
+            if (package != null)
+            {
+                await SignInManager.SignInAsync(user, isPersistent: false);
+                var orderId = await OrdersService.CreateOrder(new CreateOrderRequest(package.Id, package.Price, user.Id, true));
 
-                await UserStore.SetUserNameAsync(user, Input.PublicKey, CancellationToken.None);
-                var emailStore = GetEmailStore();
-                await emailStore.SetEmailAsync(user, $"{Input.PublicKey}@soap.capital", CancellationToken.None);
-                var result = await UserManager.CreateAsync(user, "P@55w0rd");
-
-                if (!result.Succeeded)
+                if (orderId == 0)
                 {
                     return;
                 }
 
-                var package = await PackagesService.GetPackage(6);
-                if (package != null)
-                {
-                    await SignInManager.SignInAsync(user, isPersistent: false);
-                    var orderId = await OrdersService.CreateOrder(new CreateOrderRequest(package.Id, package.Price, user.Id, true));
+                await SubscriptionsService.CreateSubscription(new CreateSubscriptionRequest(user.Id, package.Id, orderId));
+                await NotificationsService.CreateNotification(new CreateNotificationRequest($"Welcome to Soap Capital. You have successfully signed up from Tyrel.", null, false, user.Id));
 
-                    if (orderId == 0)
-                    {
-                        return;
-                    }
+                Logger.Information("Tyrel user with PublicKey {PublicKey} has successfully signed up", PublicKey);
 
-                    await SubscriptionsService.CreateSubscription(new CreateSubscriptionRequest(user.Id, package.Id, orderId));
-                    await NotificationsService.CreateNotification(new CreateNotificationRequest($"Welcome to Soap Capital. You have successfully signed up from Tyrel.", null, false, user.Id));
-
-                    Logger.Information("Tyrel user with PublicKey {PublicKey} has successfully signed up", PublicKey);
-
-                    NavigationManager.NavigateTo("/members/latest-review", forceLoad: false);
-                }
+                NavigationManager.NavigateTo("/members/latest-review", forceLoad: false);
             }
-            else
-            {
-                await SignInManager.SignInAsync(user, Input.RememberMe);
+        }
+        else
+        {
+            await SignInManager.SignInAsync(user, Input.RememberMe);
 
-                if (string.IsNullOrEmpty(ReturnUrl))
-                {
-                    OkToSignIn = true;
-                }
-
-                if (tyrelUser.Success)
-                {
-                    NavigationManager.NavigateTo("/members/latest-review", forceLoad: false);
-                }
-                else
-                {
-                    var userSubscription = await SubscriptionsService.GetUserSubscription(new GetUserSubscriptionRequest(user.Id));
-
-                    if (userSubscription != null)
-                    {
-                        await SubscriptionsService.DeleteSubscription(new DeleteSubscriptionRequest(userSubscription.Id));
-                    }
-                }
-            }
+            NavigationManager.NavigateTo("/members/latest-review", forceLoad: false);
         }
 
         NavigationManager.NavigateTo("/", forceLoad: false);

@@ -36,7 +36,7 @@
         <MudPaper Class="pa-5 d-flex align-center justify-space-between" Elevation="3">
             <div>
                 <MudText Typo="Typo.h5">Total Revenue</MudText>
-                <MudText Typo="Typo.h6" Color="MudBlazor.Color.Primary">@(Orders.Any() ? Orders.Sum(x => x.Amount).ToString("C", CultureInfo.GetCultureInfo("en-US")) : "Loading")</MudText>
+                <MudText Typo="Typo.h6" Color="MudBlazor.Color.Primary">@(Orders.Any() ? Orders.Sum(x => x.PackageId == 6 ? 0 : x.Amount).ToString("C", CultureInfo.GetCultureInfo("en-US")) : "Loading")</MudText>
             </div>
 
             <MudIcon Icon="@Icons.Material.Filled.Payment" Size="MudBlazor.Size.Large"></MudIcon>
@@ -182,7 +182,7 @@
                                     SeriesType="@SeriesType.Pie"
                                     Name="Orders"
                                     XValue="@(e => e.PackageName)"
-                                    YAggregate="@(e => e.Sum(x => x.Amount))"
+                                    YAggregate="@(e => e.Sum(x => x.PackageId == 6 ? 0 : x.Amount))"
                                     OrderBy="e => e.Y"/>
                             </ApexChart>
                         }
@@ -254,7 +254,7 @@
                     (key, monthlyGroup) => new MonthAmount
                     {
                         MonthYear = key,
-                        Amount = monthlyGroup.Sum(o => o.Amount)
+                        Amount = packageName.Contains("Tyrel") ? 0 : monthlyGroup.Sum(o => o.Amount)
                     }).ToList()
             });
     }

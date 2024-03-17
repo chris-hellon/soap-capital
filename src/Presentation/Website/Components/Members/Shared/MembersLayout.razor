@@ -12,50 +12,15 @@
 
 <SectionOutlet SectionName="PageHeaderTitle"/>
 
-<!-- TradingView Widget BEGIN -->
-<div class="tradingview-widget-container">
-    <div class="tradingview-widget-container__widget"></div>
-    <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js" async>
-  {
-  "symbols": [
-    {
-      "proName": "BITSTAMP:BTCUSD",
-      "title": "Bitcoin"
-    },
-    {
-      "proName": "BITSTAMP:ETHUSD",
-      "title": "Ethereum"
-    },
-    {
-      "description": "Dogecoin",
-      "proName": "BYBIT:DOGEUSDT.P"
-    },
-    {
-      "description": "Solana",
-      "proName": "BYBIT:SOLUSDT.P"
-    },
-    {
-      "description": "Gold",
-      "proName": "FOREXCOM:XAUUSD"
-    },
-    {
-      "description": "Silver",
-      "proName": "FOREXCOM:XAGUSD"
-    },
-    {
-      "description": "S&P500",
-      "proName": "FOREXCOM:SPX500"
-    }
-  ],
-  "showSymbolLogo": true,
-  "isTransparent": true,
-  "displayMode": "adaptive",
-  "colorTheme": "dark",
-  "locale": "en"
+@if (LoadTickerTape)
+{
+    <TradingViewTickerTape />
 }
-  </script>
-</div>
-<!-- TradingView Widget END -->
+else
+{
+    <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="44px" />
+}
+
 
 <MudContainer Class="pt-8 pb-8">
     <MudGrid>
@@ -106,6 +71,7 @@
 
 @code {
     private SubscriptionDto? UserSubscription { get; set; }
+    private bool LoadTickerTape { get; set; }
     
     protected override async Task OnInitializedAsync()
     {
@@ -119,6 +85,7 @@
             if (UserSubscription == null)
                 NavigationManager.NavigateTo("/account/subscription");
         }
-    }
 
+        LoadTickerTape = true;
+    }
 }
