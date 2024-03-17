@@ -4,9 +4,11 @@
 @using Microsoft.AspNetCore.Authentication
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
+@using Microsoft.Extensions.Options
 @using SoapCapital.Application.Catalog.Notifications.Commands
 @using SoapCapital.Application.Catalog.Orders.Commands
 @using SoapCapital.Application.Catalog.Subscriptions.Commands
+@using SoapCapital.Application.Solana.Configuration
 @using SoapCapital.Application.Solana.Wallet
 @using SoapCapital.Infrastructure.Identity
 
@@ -18,6 +20,7 @@
 @inject IOrdersService OrdersService
 @inject INotificationsService NotificationsService
 @inject IWalletService WalletService
+@inject IOptions<SolanaSettings> SolanaSettings
 
 <PageHeaderTitle Title="Log In"/>
 
@@ -48,7 +51,7 @@
 
     private async Task LoginUser()
     {
-        if (WalletService.AuthKey != AuthKey)
+        if (SolanaSettings.Value.AuthKey != AuthKey)
             NavigationManager.NavigateTo("/", forceLoad: false);
         
         var user = await UserManager.Users.FirstOrDefaultAsync(x => x.TyrelPublicKey == Input.PublicKey);

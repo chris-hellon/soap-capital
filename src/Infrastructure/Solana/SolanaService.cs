@@ -18,4 +18,11 @@ public class SolanaService : ISolanaService
     {
         return _mediator.Send(request);
     }
+    
+    public string? AuthKey { get; set; }    
+    
+    public void SetAuthKey(Guid authKey)
+    {
+        AuthKey = authKey.ToString();
+    }
 }

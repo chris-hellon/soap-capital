@@ -19,6 +19,7 @@ using SoapCapital.Infrastructure.Middleware;
 using SoapCapital.Infrastructure.OpenNode;
 using SoapCapital.Infrastructure.Persistence;
 using SoapCapital.Infrastructure.Persistence.Context;
+using SoapCapital.Infrastructure.Solana;
 using SoapCapital.Infrastructure.Solana.Wallet;
 using SoapCapital.Infrastructure.Stripe;
 
@@ -65,6 +66,7 @@ public static class Startup
             .AddStripe(config)
             .AddOpenNode(config)
             .AddBybitServices(config)
+            .AddSolana(config)
             .AddAppConfiguration(config)
             .AddRouting(options => options.LowercaseUrls = true)
             .AddControllers();

@@ -23,6 +23,7 @@ internal static class Startup
                 .AddJsonFile($"{configurationsDirectory}/stripe.json", optional: false, reloadOnChange: true)
                 .AddJsonFile($"{configurationsDirectory}/bybit.json", optional: false, reloadOnChange: true)
                 .AddJsonFile($"{configurationsDirectory}/opennode.json", optional: false, reloadOnChange: true)
+                .AddJsonFile($"{configurationsDirectory}/solana.json", optional: false, reloadOnChange: true)
                 .AddJsonFile($"{configurationsDirectory}/appconfiguration.json", optional: false, reloadOnChange: true)
                 .AddEnvironmentVariables();
         });

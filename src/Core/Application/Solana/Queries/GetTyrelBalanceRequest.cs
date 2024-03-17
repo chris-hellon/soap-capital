@@ -1,5 +1,7 @@
+using Microsoft.Extensions.Options;
 using SoapCapital.Application.Catalog.Interfaces;
 using SoapCapital.Application.Common.Exceptions;
+using SoapCapital.Application.Solana.Configuration;
 using SoapCapital.Application.Solana.Dto;
 using Solnet.Rpc;
 
@@ -17,11 +19,13 @@ public class GetTyrelBalanceRequest : IRequest<TyrelBalanceDto>
 
 internal class GetTyrelBalanceRequestHandler : IRequestHandler<GetTyrelBalanceRequest, TyrelBalanceDto>
 {
-    private IPackagesService _packagesService;
+    private readonly IPackagesService _packagesService;
+    private readonly SolanaSettings _solanaSettings;
 
-    public GetTyrelBalanceRequestHandler(IPackagesService packagesService)
+    public GetTyrelBalanceRequestHandler(IPackagesService packagesService, IOptions<SolanaSettings> solanaSettings)
     {
         _packagesService = packagesService;
+        _solanaSettings = solanaSettings.Value;
     }
 
     public async Task<TyrelBalanceDto> Handle(GetTyrelBalanceRequest request, CancellationToken cancellationToken)
@@ -34,24 +38,31 @@ internal class GetTyrelBalanceRequestHandler : IRequestHandler<GetTyrelBalanceRe
         if (tyrelPackage != null)
             amountToOwn = tyrelPackage.Price;
         
-        var client = ClientFactory.GetClient("https://mainnet.helius-rpc.com/?api-key=6374061a-1548-4055-a2a2-073154e2b11c");
+        var client = ClientFactory.GetClient(_solanaSettings.RpcUrl);
         var tokenAccounts = await client.GetTokenAccountsByOwnerAsync(ownerPubKey: request.PublicKey,
-            tokenMintPubKey: "6tHCkrCTyqZQfyG9B73HFKcjixQSi3ezWW5E4sfc7UxT");
+            tokenMintPubKey: _solanaSettings.TyrelTokenMintPubKey);
 
         if (!tokenAccounts.WasSuccessful)
         {
-            client = ClientFactory.GetClient(Cluster.MainNet);
+            client = ClientFactory.GetClient(_solanaSettings.BackupRpcUrl);
             tokenAccounts = await client.GetTokenAccountsByOwnerAsync(ownerPubKey: request.PublicKey,
-                tokenMintPubKey: "6tHCkrCTyqZQfyG9B73HFKcjixQSi3ezWW5E4sfc7UxT");
+                tokenMintPubKey: _solanaSettings.TyrelTokenMintPubKey);
             
             if (!tokenAccounts.WasSuccessful)
-                throw new CustomException(tokenAccounts.Reason, null, tokenAccounts.HttpStatusCode);
+            {
+                client = ClientFactory.GetClient(Cluster.MainNet);
+                tokenAccounts = await client.GetTokenAccountsByOwnerAsync(ownerPubKey: request.PublicKey,
+                    tokenMintPubKey: _solanaSettings.TyrelTokenMintPubKey);
+            
+                if (!tokenAccounts.WasSuccessful)
+                    throw new CustomException(tokenAccounts.Reason, null, tokenAccounts.HttpStatusCode);
+            }
         }
 
         if (tokenAccounts.Result.Value.Count == 0)
             throw new NotFoundException($"No Tyrel token founds in this wallet. You must have at least {amountToOwn:N0} $tyrel to sign up.");
 
-        var tyrelAccount = tokenAccounts.Result.Value.FirstOrDefault(x => x.Account.Owner == "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
+        var tyrelAccount = tokenAccounts.Result.Value.FirstOrDefault(x => x.Account.Owner == _solanaSettings.TyrelAccountOwnerToken);
         
         if (tyrelAccount == null)
             throw new NotFoundException($"No Tyrel token founds in this wallet. You must have at least {amountToOwn:N0} $tyrel to sign up.");

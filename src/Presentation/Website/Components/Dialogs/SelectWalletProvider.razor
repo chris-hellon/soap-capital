@@ -1,12 +1,15 @@
 @inject IJSRuntime JsRuntime
 @inject IWalletService WalletService
 @inject ISolanaService SolanaService
+@inject IOptions<SolanaSettings> SolanaSettings
 @inject AppState AppState
 
 @using SoapCapital.Infrastructure.Solana.Wallet
 @using SoapCapital.Application.Solana.Wallet
 @using SoapCapital.Application.Solana
 @using SoapCapital.Application.Solana.Queries
+@using Microsoft.Extensions.Options
+@using SoapCapital.Application.Solana.Configuration
 
 @implements IDisposable
 
@@ -86,9 +89,9 @@
 
             if (hasTyrelBalanceRequest.Result is {Success: true})
             {
-                var authKey = Guid.NewGuid();
-                WalletService.SetAuthKey(authKey);
-                NavigationManager.NavigateTo($"/tyrel-login/{WalletProvider.PublicKey}/{authKey}");
+                // var authKey = Guid.NewGuid();
+                // WalletService.SetAuthKey(authKey);
+                NavigationManager.NavigateTo($"/tyrel-login/{WalletProvider.PublicKey}/{SolanaSettings.Value.AuthKey}");
             }
         }
 
