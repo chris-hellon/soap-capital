@@ -42,21 +42,9 @@
             {
                 <MudText Class="mb-5">You currently have no active subscriptions.</MudText>
                 
-                if (User != null && !string.IsNullOrEmpty(User.TyrelPublicKey))
-                {
-                    <MudText Class="mb-5">
-                        You must have at least 420,000 in your wallet to gain access.
-                    </MudText>
-                    <MudText Class="mb-5">
-                        Ensure you have the required amount, and then sign back in.
-                    </MudText>
-                }
-                else
-                {
-                    <MudText Class="mb-5">
-                        To gain access, renew your subscription using the link below.
-                    </MudText>
-                }
+                <MudText Class="mb-5">
+                    To gain access, renew your subscription using the link below.
+                </MudText>
             }
             
             @if (OutstandingOrder != null)
@@ -106,7 +94,7 @@
         </MudCardContent>
         <MudCardActions>
             <div class="d-flex justify-space-between flex-grow-1">
-                @if (UserSubscription == null && User != null && string.IsNullOrEmpty(User.TyrelPublicKey))
+                @if (UserSubscription == null)
                 {
                     <MudButton Href="/choose-membership" Variant="Variant.Filled" Color="Color.Secondary" Size="Size.Small" StartIcon="@Icons.Material.Filled.Create">Select Package</MudButton>
                 }
