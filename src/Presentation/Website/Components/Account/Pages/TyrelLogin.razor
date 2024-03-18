@@ -9,7 +9,6 @@
 @using SoapCapital.Application.Catalog.Orders.Commands
 @using SoapCapital.Application.Catalog.Subscriptions.Commands
 @using SoapCapital.Application.Solana.Configuration
-@using SoapCapital.Application.Solana.Wallet
 @using SoapCapital.Infrastructure.Identity
 
 @inject SignInManager<ApplicationUser> SignInManager
@@ -19,7 +18,6 @@
 @inject ISubscriptionsService SubscriptionsService
 @inject IOrdersService OrdersService
 @inject INotificationsService NotificationsService
-@inject IWalletService WalletService
 @inject IOptions<SolanaSettings> SolanaSettings
 
 <PageHeaderTitle Title="Log In"/>
@@ -88,9 +86,7 @@
 
                 await SubscriptionsService.CreateSubscription(new CreateSubscriptionRequest(user.Id, package.Id, orderId));
                 await NotificationsService.CreateNotification(new CreateNotificationRequest($"Welcome to Soap Capital. You have successfully signed up from Tyrel.", null, false, user.Id));
-
-                Logger.Information("Tyrel user with PublicKey {PublicKey} has successfully signed up", PublicKey);
-
+                
                 NavigationManager.NavigateTo("/members/latest-review", forceLoad: false);
             }
         }

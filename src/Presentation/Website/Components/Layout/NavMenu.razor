@@ -14,7 +14,6 @@
 @inject NavigationManager NavigationManager
 @inject IOptions<AppSettings> AppSettings
 @inject INotificationsService NotificationsService
-@inject IWalletService WalletService
 
 @if (AppSettings.Value.NavigationLinks.Any())
 {
@@ -43,12 +42,6 @@
             <DesktopNavigationLinks CurrentUrl="@_currentUrl" IsDarkMode="IsDarkMode" UserHasSubscription="userHasSubscription" UserIsAdmin="userIsAdmin" UserIsSignedIn="userIsSignedIn"></DesktopNavigationLinks>
 
             <MudSpacer/>
-
-            <AuthorizeView>
-                <NotAuthorized>
-                    <MudButton OnClick="SelectWallet" Variant="Variant.Text" Style="padding:6px 6px !important;" IconClass="rounded" StartIcon="@CustomIcons.Tyrel" Color="@(IsDarkMode ? Color.Tertiary : Color.Dark)" Size="Size.Small" Class="me-3 tyrel-wallet-connect">$tyrel</MudButton>
-                </NotAuthorized>
-            </AuthorizeView>
 
             <NavMenuSocialLinks IsDarkMode="IsDarkMode" UserIsSignedIn="userIsSignedIn" UserSubscription="UserSubscription"></NavMenuSocialLinks>
 
@@ -170,16 +163,4 @@
     {
         NavigationManager.LocationChanged -= OnLocationChanged;
     }
-
-    private void SelectWallet()
-    {
-        var parameters = new DialogParameters
-        {
-            {nameof(Dialogs.SelectWalletProvider.Adapters), WalletService.WalletProviders}
-        };
-
-        var options = new DialogOptions {CloseButton = true, MaxWidth = MaxWidth.ExtraSmall, FullWidth = true};
-        DialogService.Show<Dialogs.SelectWalletProvider>("Select Provider", parameters, options);
-    }
-
 }

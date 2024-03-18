@@ -1,8 +1,9 @@
+using SoapCapital.Application.Common.Interfaces;
 using Solnet.Wallet;
 
 namespace SoapCapital.Infrastructure.Solana.Wallet;
 
-public class AppState
+public class AppState : IScopedService
 {
     public string? SelectedNetwork { get; private set; }
     public void SetNetwork(string network)

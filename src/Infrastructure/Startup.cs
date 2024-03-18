@@ -86,8 +86,7 @@ public static class Startup
             .AddEntityFrameworkStores<ApplicationDbContext>();
 
         services.AddServices();
-        services.AddSingleton<IWalletService, WalletService>();
-        services.AddSingleton(s => new AppState());
+        services.AddScoped(s => new AppState());
         
         return services;
     }

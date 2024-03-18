@@ -1,7 +1,15 @@
 @using Microsoft.Extensions.Options
 @using SoapCapital.Application.Catalog.Subscriptions.Dto
+@using SoapCapital.Application.Solana.Wallet
 @using SoapCapital.Infrastructure.Configuration
 @inject IOptions<AppSettings> AppSettings
+@inject IWalletService WalletService
+
+<AuthorizeView>
+    <NotAuthorized>
+        <MudButton OnClick="SelectWallet" Variant="Variant.Text" Style="padding:6px 6px !important;" IconClass="rounded" StartIcon="@CustomIcons.Tyrel" Color="@(IsDarkMode ? Color.Tertiary : Color.Dark)" Size="Size.Small" Class="me-3 tyrel-wallet-connect">$tyrel</MudButton>
+    </NotAuthorized>
+</AuthorizeView>
 
 @if (AppSettings.Value.SocialLinks.Any())
 {
@@ -40,4 +48,15 @@
     [Parameter] public bool UserIsSignedIn { get; set; }
     [Parameter] public bool IsDarkMode { get; set; }
     [Parameter] public SubscriptionDto? UserSubscription { get; set; }
+    
+    private void SelectWallet()
+    {
+        var parameters = new DialogParameters
+        {
+            {nameof(Dialogs.SelectWalletProvider.Adapters), WalletService.WalletProviders}
+        };
+
+        var options = new DialogOptions {CloseButton = true, MaxWidth = MaxWidth.ExtraSmall, FullWidth = true};
+        DialogService.Show<Dialogs.SelectWalletProvider>("Select Provider", parameters, options);
+    }
 }

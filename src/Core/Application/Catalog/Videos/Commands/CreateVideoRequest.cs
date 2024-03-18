@@ -24,6 +24,8 @@ public class CreateVideoRequest : IRequest<int>
     [Display(Name = "Education")] public bool MembersEducation { get; set; } = false;
 
     [Display(Name = "Latest Review")] public bool TodaysReview { get; set; } = false;
+
+    public bool IsUltraWide { get; set; } = true;
     
     public string? BaseUrl { get; set; }
 

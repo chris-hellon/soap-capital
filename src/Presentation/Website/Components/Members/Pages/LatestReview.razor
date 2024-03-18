@@ -10,7 +10,7 @@
 @implements IDisposable
 
 <SectionContent SectionName="PageHeaderTitle">  
-    <PageHeaderTitle Title="Latest Review"></PageHeaderTitle>
+    <PageHeaderTitle Title="@PageTitle"></PageHeaderTitle>
 </SectionContent>
 
 @if (LatestReviewVideo != null)
@@ -31,6 +31,8 @@ else
 
     private PersistingComponentStateSubscription _subscription;
     
+    private string? PageTitle { get; set; }
+    
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender) return;
@@ -43,6 +45,8 @@ else
         LatestReviewVideo = (foundInState
             ? latestReviewVideo
             : await GetLatestReview()!) ?? null;
+
+        PageTitle = LatestReviewVideo?.Title;
         
         StateHasChanged();
     }
