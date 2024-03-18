@@ -1,7 +1,7 @@
 using MediatR;
 using SoapCapital.Application.Bybit;
 using SoapCapital.Application.Bybit.Dto;
-using SoapCapital.Application.ByBit.Queries;
+using SoapCapital.Application.Bybit.Queries;
 
 namespace SoapCapital.Infrastructure.Bybit;
 

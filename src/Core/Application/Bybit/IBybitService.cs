@@ -1,5 +1,5 @@
 using SoapCapital.Application.Bybit.Dto;
-using SoapCapital.Application.ByBit.Queries;
+using SoapCapital.Application.Bybit.Queries;
 using SoapCapital.Application.Common.Interfaces;
 
 namespace SoapCapital.Application.Bybit;

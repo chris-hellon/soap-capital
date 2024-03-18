@@ -2,11 +2,10 @@ using bybit.net.api;
 using bybit.net.api.ApiServiceImp;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
-using SoapCapital.Application.Bybit;
 using SoapCapital.Application.Bybit.Dto;
 using SoapCapital.Application.Common.Exceptions;
 
-namespace SoapCapital.Application.ByBit.Queries;
+namespace SoapCapital.Application.Bybit.Queries;
 
 public class GetAffiliateUsersRequest : IRequest<GetAffiliateUsersResponseDto?>
 {

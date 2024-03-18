@@ -12,6 +12,7 @@ using SoapCapital.Infrastructure.Bybit;
 using SoapCapital.Infrastructure.Caching;
 using SoapCapital.Infrastructure.Common;
 using SoapCapital.Infrastructure.Configuration;
+using SoapCapital.Infrastructure.DexScreener;
 using SoapCapital.Infrastructure.FileStorage;
 using SoapCapital.Infrastructure.Identity;
 using SoapCapital.Infrastructure.Mailing;
@@ -67,6 +68,7 @@ public static class Startup
             .AddOpenNode(config)
             .AddBybitServices(config)
             .AddSolana(config)
+            .AddDexScreener(config)
             .AddAppConfiguration(config)
             .AddRouting(options => options.LowercaseUrls = true)
             .AddControllers();
