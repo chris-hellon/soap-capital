@@ -123,7 +123,7 @@ internal class GetTyrelBalanceRequestHandler : IRequestHandler<GetTyrelBalanceRe
         if (tyrelBalance.AmountDecimal <= amountToOwn)
             throw new NotFoundException($"You must have at least {amountToOwn:N0} $tyrel (${dollarAmountToOwn}) to sign up.");
         
-        _logger.Information("Public key: {RequestPublicKey} signed up. Tyrel Balance: {TyrelBalanceAmountDecimal}", request.PublicKey, tyrelBalance.AmountDecimal);
+        _logger.Information("Public key: {RequestPublicKey} signed up. Balance reqired: {AmountToOwn}. Users Balance: {TyrelBalanceAmountDecimal}", request.PublicKey, amountToOwn, tyrelBalance.AmountDecimal);
         
         tyrelBalanceDto.Amount = tyrelBalance.AmountDecimal.ToString("N0");
         tyrelBalanceDto.Success = true;
