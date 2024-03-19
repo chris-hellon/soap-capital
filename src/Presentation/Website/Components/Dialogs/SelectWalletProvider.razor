@@ -85,13 +85,22 @@
         {
             WalletService.SetProvider(WalletProvider);
 
-            var hasTyrelBalanceRequest = Task.Run(() => ServiceHelper.ExecuteCallGuardedAsync(() => SolanaService.GetTyrelBalance(new GetTyrelBalanceRequest(WalletProvider.PublicKey)), Snackbar, Logger));
-
-            if (hasTyrelBalanceRequest.Result is {Success: true})
+            try
             {
-                // var authKey = Guid.NewGuid();
-                // WalletService.SetAuthKey(authKey);
-                NavigationManager.NavigateTo($"/tyrel-login/{WalletProvider.PublicKey}/{SolanaSettings.Value.AuthKey}");
+                var hasTyrelBalanceRequest = Task.Run(() => ServiceHelper.ExecuteCallGuardedAsync(() => SolanaService.GetTyrelBalance(new GetTyrelBalanceRequest(WalletProvider.PublicKey)), Snackbar, Logger));
+
+                if (hasTyrelBalanceRequest.Result is {Success: true})
+                {
+                    // var authKey = Guid.NewGuid();
+                    // WalletService.SetAuthKey(authKey);
+                    NavigationManager.NavigateTo($"/tyrel-login/{WalletProvider.PublicKey}/{SolanaSettings.Value.AuthKey}");
+                }
+                
+                Snackbar.Add($"Unable to fetch Tyrel balance. Please refresh the page and try again", Severity.Error);
+            }
+            catch (Exception)
+            {
+                // ignored
             }
         }
 
