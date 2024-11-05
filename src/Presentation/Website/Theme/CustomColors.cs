@@ -9,7 +9,6 @@ public static class CustomColors
         Light.Primary,
         Colors.Amber.Default,
         Colors.Blue.Default,
-        Colors.BlueGrey.Default,
         Colors.Brown.Default,
         Colors.Cyan.Default,
         Colors.DeepOrange.Default,

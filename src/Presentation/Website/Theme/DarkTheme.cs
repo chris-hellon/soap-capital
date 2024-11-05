@@ -14,7 +14,6 @@ public class DarkTheme : MudTheme
             Tertiary = CustomColors.Light.Tertiary,
             Black = CustomColors.Dark.Black,
             Background = CustomColors.Dark.Background,
-            BackgroundGrey = "#27272f",
             Surface = CustomColors.Dark.Surface,
             DrawerBackground = CustomColors.Dark.DrawerBackground,
             DrawerText = "rgba(255,255,255, 0.50)",

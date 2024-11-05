@@ -11,7 +11,7 @@
             <NotAuthorized>
                 @if (context.User.Identity is {IsAuthenticated: false})
                 {
-                    NavigationManager.NavigateTo($"account/login?returnUrl={Uri.EscapeDataString(NavigationManager.Uri)}", forceLoad: true);
+                    NavigationManager.NavigateTo($"login?returnUrl={Uri.EscapeDataString(NavigationManager.Uri)}", forceLoad: true);
                 }
                 else
                 {

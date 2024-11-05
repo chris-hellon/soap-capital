@@ -2,11 +2,12 @@
   <library name="Generated files" type="javaScript">
     <properties>
       <sourceFilesUrls>
-        <item url="file://$PROJECT_DIR$/src/Presentation/Website/wwwroot/js/jsinterop.min.js" />
+        <item url="file://$PROJECT_DIR$/src/Presentation/Website/wwwroot/js/soapcapital.min.js" />
       </sourceFilesUrls>
     </properties>
     <CLASSES>
-      <root url="file://$PROJECT_DIR$/src/Presentation/Website/wwwroot/js/jsinterop.min.js" />
+      <root url="file://$PROJECT_DIR$/src/Presentation/Website/wwwroot/js/soapcapital.min.js" />
+      <root url="file://$PROJECT_DIR$/src/Presentation/Website/wwwroot/js/solanawallet.min.js" />
     </CLASSES>
     <JAVADOC />
     <SOURCES />

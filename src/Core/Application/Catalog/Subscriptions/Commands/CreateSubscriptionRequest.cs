@@ -51,6 +51,7 @@ internal class CreateSubscriptionRequestHandler : IRequestHandler<CreateSubscrip
         
         request.EndDate = package.DurationType switch
         {
+            "Day" => request.StartDate.Value.AddDays(package.Duration),
             "Month" => request.StartDate.Value.AddMonths(package.Duration),
             "Year" => request.StartDate.Value.AddYears(package.Duration),
             _ => request.EndDate

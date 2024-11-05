@@ -14,4 +14,6 @@ public class OrderDto
     public string PackageName { get; set; } = string.Empty;
     public int? UpgradeSubscriptionId { get; set; }
     public string? StripeSessionId { get; set; }
+    public string? SolanaPayReferenceId { get; set; }
+    public string? SolanaPayToken { get; set; }
 }

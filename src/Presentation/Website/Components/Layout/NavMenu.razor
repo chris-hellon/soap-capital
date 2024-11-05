@@ -50,8 +50,8 @@
                     <UserNotifications Notifications="Notifications" GetUserNotifications="GetUserNotificationsWithStateChange" IsDarkMode="IsDarkMode"></UserNotifications>
                 </Authorized>
                 <NotAuthorized>
-                    <MudButton Href="/login" Class="me-5 ms-5" Variant="Variant.Filled" Color="Color.Secondary">Log In</MudButton>
-                    <MudButton Href="/choose-membership" Variant="Variant.Filled" Color="Color.Primary">Sign Up</MudButton>
+                    <MudButton Href="/login" Class="me-5 ms-5 identity-buttons" Variant="Variant.Filled" Color="Color.Secondary">Log In</MudButton>
+                    <MudButton Href="/choose-membership" Class="identity-buttons" Variant="Variant.Filled" Color="Color.Primary">Sign Up</MudButton>
                 </NotAuthorized>
             </AuthorizeView>
             <AuthorizeView>
@@ -88,8 +88,8 @@
 
             <AuthorizeView>
                 <NotAuthorized>
-                    <MudNavLink Href="/login">Log In</MudNavLink>
-                    <MudNavLink Href="/choose-membership">Sign Up</MudNavLink>
+                    <MudNavLink Href="/login" Class="identity-buttons">Log In</MudNavLink>
+                    <MudNavLink Href="/choose-membership" Class="identity-buttons">Sign Up</MudNavLink>
                 </NotAuthorized>
             </AuthorizeView>
         </MudNavMenu>

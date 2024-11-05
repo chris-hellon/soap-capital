@@ -27,19 +27,23 @@
                 <MudTextField For="@(() => context.Title)" @bind-Value="context.Title" Label="Title" Variant="Variant.Outlined"/>
             </MudItem>
             <MudItem lg="4" xs="12">
-                <MudSwitch For="@(() => context.IsHidden)" @bind-Value="@context.IsHidden" Label="Hide from Website?" Color="Color.Info" />
+                <MudSwitch For="@(() => context.IsHidden)" @bind-Value="@context.IsHidden" Label="Hide from Website?" Color="Color.Info"/>
             </MudItem>
             <MudItem lg="12" xs="12">
                 <MudTextField For="@(() => context.Price)" @bind-Value="context.Price" Label="Price" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.AttachMoney" Variant="Variant.Outlined"/>
             </MudItem>
             <MudItem lg="12" xs="12">
-                <MudTextField For="@(() => context.Title)" @bind-Value="context.StripePriceId" Label="Stripe Price Id" Variant="Variant.Outlined"/>
+                <MudTextField For="@(() => context.WhopCheckoutUrl)" @bind-Value="context.WhopCheckoutUrl" Label="Whop Checkout Url" Variant="Variant.Outlined"/>
             </MudItem>
+            @* <MudItem lg="12" xs="12"> *@
+            @*     <MudTextField For="@(() => context.SolanaPublicWalletKey)" @bind-Value="context.SolanaPublicWalletKey" Label="Solana Public Wallet Key" Variant="Variant.Outlined"/> *@
+            @* </MudItem> *@
             <MudItem lg="6" xs="12">
                 <MudNumericField T="int" For="@(() => context.Duration)" @bind-Value="context.Duration" Label="Duration" Variant="Variant.Outlined"/>
             </MudItem>
             <MudItem lg="6" xs="12">
                 <MudSelect For="@(() => context.DurationType)" @bind-Value="context.DurationType" T="string" Label="Duration Type" Variant="Variant.Outlined" AnchorOrigin="Origin.BottomCenter">
+                    <MudSelectItem Value="@("Day")"/>
                     <MudSelectItem Value="@("Month")"/>
                     <MudSelectItem Value="@("Year")"/>
                 </MudSelect>
@@ -65,7 +69,7 @@
         new EntityField<PackageDto>(package => package.Title, "Title"),
         new EntityField<PackageDto>(package => $"{package.Duration} {package.DurationType}", "Duration"),
         new EntityField<PackageDto>(package => package.Price.ToString("C", CultureInfo.GetCultureInfo("en-US")), "Price"),
-        new EntityField<PackageDto>(package => package.StripePriceId, "Sripe Price Id")
+        new EntityField<PackageDto>(package => package.WhopCheckoutUrl, "Whop Checkout Url")
     ];
 
     public static bool SearchPackages(string? searchString, PackageDto package)
@@ -89,4 +93,5 @@
 
         Loading = false;
     }
+
 }

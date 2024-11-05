@@ -3,7 +3,9 @@
 @using System.ComponentModel.DataAnnotations
 @using System.Diagnostics
 @using System.Globalization
+@using System.Security.Cryptography
 @using Microsoft.AspNetCore.Identity
+@using NBitcoin.DataEncoders
 @using SoapCapital.Application.Catalog.Notifications.Commands
 @using SoapCapital.Application.Catalog.Orders.Commands
 @using SoapCapital.Application.Catalog.Packages.Dto
@@ -13,7 +15,6 @@
 @using SoapCapital.Application.OpenNode
 @using SoapCapital.Application.OpenNode.Commands
 @using SoapCapital.Application.Stripe
-@using SoapCapital.Application.Stripe.Commands
 @using SoapCapital.Infrastructure.Identity
 @using SoapCapital.Shared.Authorization
 
@@ -121,11 +122,11 @@
                 <MudItem lg="5" xs="12">
                     <MudText Typo="Typo.h5" GutterBottom="true">Order Summary</MudText>
                     <MudPaper Class="d-flex flex-column" Style="height:calc(100% - 35px)" Outlined="true">
-                        <MudList Clickable="true">
+                        <MudList Clickable="true" T="string">
                             <MudListItem Disabled="true" Icon="@(PaymentMethod == "bitcoin" ? CustomIcons.Bitcoin : Icons.Material.Filled.CreditCard)">
                                 <div class="d-flex">
                                     <MudText>Payment Method</MudText>
-                                    <MudText Inline="true" Class="ml-auto">@PaymentMethod?.Replace("-", " ").Replace("credit card", "Credit Card").Replace("bitcoin", "Bitcoin")</MudText>
+                                    <MudText Inline="true" Class="ml-auto">@PaymentMethod?.Replace("-", " ").ToUpper().Replace("CREDIT CARD", "Credit Card").Replace("BITCOIN", "Bitcoin").Replace("SOLANA PAY", "Solana Pay")</MudText>
                                 </div>
                             </MudListItem>
                             <MudListItem Disabled="true" Icon="@Icons.Material.Filled.MiscellaneousServices">
@@ -244,7 +245,7 @@
 
                     if (createChargeResponse is {Data: not null} && !string.IsNullOrEmpty(createChargeResponse.Data.CheckoutUrl))
                     {
-                        await OrdersService.UpdateOrder(new UpdateOrderRequest(orderId, createChargeResponse.Data?.Id, false, null));
+                        await OrdersService.UpdateOrder(new UpdateOrderRequest(orderId, createChargeResponse.Data?.Id, false, null, null));
                         Debug.Assert(createChargeResponse.Data != null, "createChargeResponse.Data != null");
 
                         await NotificationsService.CreateNotification(new CreateNotificationRequest("Your order has been processed. If you haven't yet completed your payment, click here to proceed.", createChargeResponse.Data.CheckoutUrl, false, user.Id));
@@ -257,21 +258,45 @@
                         return;
                     }
                 }
-                else
+                else if (!string.IsNullOrEmpty(Package.WhopCheckoutUrl) && PaymentMethod == "credit-card")
                 {
-                    var stripeSession = await StripeService.CreateStripeSession(new CreateStripeSessionRequest(Package.StripePriceId, successUrl, cancelUrl));
-                    await NotificationsService.CreateNotification(new CreateNotificationRequest("Your order has been processed. If you haven't yet completed your payment, click here to proceed.", stripeSession.Url, false, user.Id));
-
-                    await OrdersService.UpdateOrder(new UpdateOrderRequest(orderId, null, false, stripeSession.Id));
+                    var whopUrl = $"{Package.WhopCheckoutUrl}?onSuccess={successUrl}";
                     
-                    NavigationManager.NavigateTo(stripeSession.Url);
+                    await NotificationsService.CreateNotification(new CreateNotificationRequest("Your order has been processed. If you haven't yet completed your payment, click here to proceed.", whopUrl, false, user.Id));
+
+                    await OrdersService.UpdateOrder(new UpdateOrderRequest(orderId, null, false, null, null));
+                    
+                    NavigationManager.NavigateTo(whopUrl);
+                }
+                else if (!string.IsNullOrEmpty(Package.SolanaPublicWalletKey) && PaymentMethod is "usdt" or "usdc")
+                {
+                    var solanaPayReferenceId = GenerateBase58Reference();
+                    
+                    await OrdersService.UpdateOrder(new UpdateOrderRequest(orderId, null, false, null, solanaPayReferenceId, PaymentMethod));
+                    
+                    NavigationManager.NavigateTo(successUrl);
                 }
             }
         }
 
         RedirectManager.RedirectTo(ReturnUrl);
     }
+    
+    private static string GenerateBase58Reference()
+    {
+        // Generate a random 32-byte array
+        var randomBytes = new byte[32];
+        using (var rng = RandomNumberGenerator.Create())
+        {
+            rng.GetBytes(randomBytes);
+        }
 
+        // Encode the 32-byte array to Base58 using NBitcoin
+        var base58Reference = Encoders.Base58.EncodeData(randomBytes);
+
+        return base58Reference;
+    }
+    
     private static ApplicationUser CreateUser()
     {
         try

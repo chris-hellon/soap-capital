@@ -6,13 +6,17 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using SoapCapital.Application.Factories;
 using SoapCapital.Application.Solana.Wallet;
 using SoapCapital.Infrastructure.Auth;
+using SoapCapital.Infrastructure.BackgroundJobs;
 using SoapCapital.Infrastructure.Bybit;
 using SoapCapital.Infrastructure.Caching;
+using SoapCapital.Infrastructure.CoinGecko;
 using SoapCapital.Infrastructure.Common;
 using SoapCapital.Infrastructure.Configuration;
 using SoapCapital.Infrastructure.DexScreener;
+using SoapCapital.Infrastructure.Factories;
 using SoapCapital.Infrastructure.FileStorage;
 using SoapCapital.Infrastructure.Identity;
 using SoapCapital.Infrastructure.Mailing;
@@ -64,21 +68,25 @@ public static class Startup
             .AddPersistence(config)
             .AddRequestLogging(config)
             .AddHttpContextAccessor()
+            .AddBackgroundJobs(config)
             .AddStripe(config)
             .AddOpenNode(config)
             .AddBybitServices(config)
             .AddSolana(config)
             .AddDexScreener(config)
+            .AddCoinGecko()
             .AddAppConfiguration(config)
             .AddRouting(options => options.LowercaseUrls = true)
             .AddControllers();
         
         services.AddScoped<UserManager<ApplicationUser>, UserManager<ApplicationUser>>();
-
+        services.AddSingleton<IMediatorFactory, MediatorFactory>();
         services.AddIdentityCore<ApplicationUser>(options =>
             {
                 options.SignIn.RequireConfirmedAccount = false;
                 options.User.RequireUniqueEmail = true;
+                options.SignIn.RequireConfirmedEmail = false;
+                options.SignIn.RequireConfirmedPhoneNumber = false;
             })
             .AddRoles<IdentityRole>()
             .AddSignInManager()
@@ -105,5 +113,7 @@ public static class Startup
             .UseCurrentUser()
             .UseAuthorization()
             .UseAntiforgery()
-            .UseRequestLogging(config);
+            .UseRequestLogging(config)
+            .UseHangfireDashboard(config)
+            .ConfigureBackgroundJobs();
 }

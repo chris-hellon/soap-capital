@@ -14,7 +14,7 @@ public interface IWalletService : IScopedService
         
     void SetProvider(IWalletProvider provider);
 
-    Task<byte[]?>? SignMessage(byte[] compiledMessage);
+    Task<MessageResponse?>? SignMessage();
 
     Task<byte[]?>? SignTransaction(byte[] compiledMessage);
     

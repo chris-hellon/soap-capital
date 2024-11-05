@@ -33,7 +33,7 @@
     <MudItem lg="12" xs="12">
         <MudText Typo="Typo.h5" GutterBottom="true">Order Summary</MudText>
         <MudPaper Class="d-flex flex-column" Style="height:calc(100% - 35px)" Outlined="true">
-            <MudList Clickable="true">
+            <MudList Clickable="true" T="string">
                 <MudListItem Disabled="true" Icon="@(PaymentMethod == "bitcoin" ? CustomIcons.Bitcoin : Icons.Material.Filled.CreditCard)">
                     <div class="d-flex">
                         <MudText>Payment Method</MudText>

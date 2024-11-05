@@ -41,8 +41,8 @@ public class WalletProvider : IWalletProvider
 
         _jsRuntime = jsRuntime;
         const string funcToExecute = "getWalletAdapterClass";
-        _wallet = await _jsRuntime.InvokeAsync<IJSObjectReference>($"jsinterop.{funcToExecute}", Name,
-            "./jsinterop.js");
+        _wallet = await _jsRuntime.InvokeAsync<IJSObjectReference>($"solanawallet.{funcToExecute}", Name,
+            "./solanawallet.js");
         if (_wallet == null)
         {
             Console.WriteLine("wallet is null");
@@ -87,7 +87,7 @@ public class WalletProvider : IWalletProvider
         await _adapter.InvokeVoidAsync("disconnect");
     }
 
-    public async Task<byte[]?> SignMessage(byte[] message)
+    public async Task<MessageResponse?> SignMessage()
     {
         if (_wallet == null)
         {
@@ -95,7 +95,7 @@ public class WalletProvider : IWalletProvider
             return null;
         }
 
-        var signature = await _wallet.InvokeAsync<byte[]>("signMessage", message);
+        var signature = await _wallet.InvokeAsync<MessageResponse>("signMessage");
         return signature;
     }
 

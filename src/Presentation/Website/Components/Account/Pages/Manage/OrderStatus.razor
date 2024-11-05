@@ -10,20 +10,28 @@
 @using SoapCapital.Application.Catalog.Notifications.Commands
 @using SoapCapital.Application.Mailing
 @using BlazorTemplater
+@using QRCoder
+@using SoapCapital.Application.Solana.Queries
 @using SoapCapital.Application.Stripe
 @using SoapCapital.Application.Stripe.Queries
 @using SoapCapital.Website.EmailTemplates
 @using Stripe.Checkout
+@using System.Drawing.Imaging
+@using System.Security.Cryptography
+@using NBitcoin.DataEncoders
+@using SoapCapital.Application.Factories
+@using SoapCapital.Infrastructure.Solana
+@using QRCode = QRCoder.QRCode
 
+@inject IJSRuntime JSRuntime
 @inject IOrdersService OrdersService
 @inject IOpenNodeService OpenNodeService
 @inject IPackagesService PackagesService
-@inject ISubscriptionsService SubscriptionsService
 @inject ICurrentUser CurrentUser
-@inject INotificationsService NotificationsService
 @inject IMailService MailService
 @inject IStripeService StripeService
-@inject IdentityUserAccessor UserAccessor
+@inject IMediatorFactory MediatorFactory
+@inject SolanaWebSocketListener SolanaWebSocketListener
 
 <SectionContent SectionName="PageHeaderTitle">
     <PageHeaderTitle Title="Order Status"/>
@@ -41,6 +49,10 @@
             else if (StripePaymentSession != null)
             {
                 <MudText Class="mt-5">The current status of your order is: <span class="mud-primary-text fw-bold">@StripePaymentSession.Status</span></MudText>
+            }
+            else if (Order != null && !string.IsNullOrEmpty(Order.SolanaPayReferenceId))
+            {
+                <MudText Class="mt-5">The current status of your order is: <span class="mud-primary-text fw-bold">@(_isSolanaPaymentConfirmed || Order.OrderConfirmed ? "Paid" : "Unpaid")</span></MudText>
             }
 
             <MudText Class="mt-5">Please find details of your order below:</MudText>
@@ -68,6 +80,33 @@
                     </MudItem>
                 }
             </MudGrid>
+
+            if (!string.IsNullOrEmpty(Order.SolanaPayReferenceId) && !_isSolanaPaymentConfirmed && !Order.OrderConfirmed)
+            {
+                <MudDivider Class="mb-5 mt-5"/>
+
+                <MudGrid>
+                    <MudItem lg="12" xs="12">
+                        <MudText>Please scan the following QR code to complete your payment.</MudText>
+                    </MudItem>
+                    <MudItem lg="12" xs="12">
+                        <MudText>
+                            <strong>DO NOT close this page until you have completed a successful transaction and this page has been updated to reflect a successful payment.</strong>
+                        </MudText>
+                    </MudItem>
+                    <MudItem lg="12" xs="12">
+                        <MudText>
+                            <strong>You must ensure that you have a Solana wallet app installed on your device, and you have @Order.Amount @Order.SolanaPayToken.ToLower() in your chosen wallet.</strong>
+                        </MudText>
+                    </MudItem>
+                    <MudItem lg="12" xs="12">
+                        <MudImage Fluid="true" Src="@QrCodeBase64"/>
+                    </MudItem>
+                    @* <MudItem lg="12" xs="12"> *@
+                    @*     <button type="button" onclick="openSolanaPayUrl('@SolanaPayUrl');" class="mud-button-root mud-button mud-button-filled mud-button-filled-primary mud-button-filled-size-medium mud-ripple" __internal_stoppropagation_onclick="" style="--mud-ripple-offset-x: -22.441864013671875px; --mud-ripple-offset-y: -10.143243789672852px;"><span class="mud-button-label">Pay Now</span></button> *@
+                    @* </MudItem> *@
+                </MudGrid>
+            }
         }
         <MudDivider Class="mt-5"/>
     </MudCardContent>
@@ -89,17 +128,17 @@
 
 @code {
     [SupplyParameterFromQuery] [Parameter] public int OrderId { get; set; }
-    
     [SupplyParameterFromQuery] [Parameter] public int? SubscriptionId { get; set; }
-    
-    [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
-    
+
     private OrderDto? Order { get; set; }
     private PackageDto? Package { get; set; }
     private GetChargeInfoResponseDto? GetChargeInfoResponse { get; set; }
     private Session? StripePaymentSession { get; set; }
     private DateTime? StartDate { get; set; }
     private DateTime? EndDate { get; set; }
+    private string? QrCodeBase64 { get; set; }
+    private string? SolanaPayUrl { get; set; }
+    private bool _isSolanaPaymentConfirmed;
 
     protected override async Task OnInitializedAsync()
     {
@@ -113,9 +152,7 @@
             {
                 GetChargeInfoResponse = await OpenNodeService.GetChargeInfo(new GetChargeInfoReqest(Order.OpenNodeId));
 
-                var status = GetChargeInfoResponse.Data?.Status;
-
-                if (status == "paid")
+                if (GetChargeInfoResponse.Data?.Status == "paid")
                 {
                     await CreateSubscription();
                 }
@@ -129,6 +166,45 @@
                     await CreateSubscription();
                 }
             }
+            else if (!string.IsNullOrEmpty(Order.SolanaPayReferenceId) && Package != null && !string.IsNullOrEmpty(Package.SolanaPublicWalletKey))
+            {
+                if (!Order.OrderConfirmed)
+                {
+                    SolanaPayUrl = GenerateSolanaPayUrl(Package.SolanaPublicWalletKey, Order.Amount, Order.SolanaPayReferenceId, Package.Title, Order.Id, Order.SolanaPayToken);
+
+                    try
+                    {
+                        QrCodeBase64 = GenerateQrCodeBase64(SolanaPayUrl);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Error("QR code generation failed: {Message}", ex.Message);
+                    }
+
+                    await StartListeningForPaymentConfirmation();
+                }
+            }
+        }
+    }
+
+    private async Task StartListeningForPaymentConfirmation()
+    {
+        if (Order != null && Package != null)
+        {
+            // Start listening for payment confirmation using the SolanaWebSocketListener
+            SolanaWebSocketListener.PaymentConfirmed += OnPaymentConfirmed;
+            await SolanaWebSocketListener.StartListeningAsync(Package.SolanaPublicWalletKey, Order.SolanaPayReferenceId);
+        }
+    }
+
+    private async void OnPaymentConfirmed(object? sender, PaymentConfirmedEventArgs e)
+    {
+        _isSolanaPaymentConfirmed = e.IsPaymentConfirmed;
+        if (_isSolanaPaymentConfirmed)
+        {
+            QrCodeBase64 = null;
+            await CreateSubscription();
+            StateHasChanged();
         }
     }
 
@@ -136,22 +212,24 @@
     {
         if (Order is {OrderConfirmed: false})
         {
-            var createSubscriptionRequest = new CreateSubscriptionRequest(CurrentUser.GetUserId().ToString(), Order.PackageId, Order.Id);
-            var subscriptionId = SubscriptionId ?? await SubscriptionsService.CreateSubscription(createSubscriptionRequest);
+            var userId = CurrentUser.GetUserId().ToString();
+            
+            var createSubscriptionRequest = new CreateSubscriptionRequest(userId, Order.PackageId, Order.Id);
+
+            var mediator = MediatorFactory.CreateMediator();
+            var subscriptionId = SubscriptionId ?? await mediator.Send(createSubscriptionRequest);
 
             if (subscriptionId.HasValue)
             {
                 StartDate = createSubscriptionRequest.StartDate;
                 EndDate = createSubscriptionRequest.EndDate;
 
-                await OrdersService.UpdateOrder(new UpdateOrderRequest(Order.Id, Order.OpenNodeId, true, Order.StripeSessionId));
+                await mediator.Send(new UpdateOrderRequest(Order.Id, Order.OpenNodeId, true, Order.StripeSessionId, Order.SolanaPayReferenceId));
 
                 var url = $"{NavigationManager.BaseUri}account/subscription";
-                await NotificationsService.CreateNotification(new CreateNotificationRequest("Your order has been successful.<br />View your subscription here.", url, false, CurrentUser.GetUserId().ToString()));
-            
-                var user = await UserAccessor.GetRequiredUserAsync(HttpContext);
-            
-                var unsubscribeUrl = $"{NavigationManager.BaseUri}unsubscribe/{user.Id}";
+                await mediator.Send(new CreateNotificationRequest("Your order has been successful.<br />View your subscription here.", url, false, CurrentUser.GetUserId().ToString()));
+                    
+                var unsubscribeUrl = $"{NavigationManager.BaseUri}unsubscribe/{userId}";
                 var mailHtml = new ComponentRenderer<OrderConfirmationTemplate>()
                     .Set(c => c.Model,
                         new OrderConfirmationTemplateModel(Order.Id,
@@ -161,16 +239,55 @@
                             unsubscribeUrl))
                     .Render();
 
-                if (user.Email != null)
+                var userEmail = CurrentUser.GetUserEmail();
+                
+                if (userEmail != null)
                 {
-                    var mailRequest = new MailRequest(
-                        to: [user.Email],
-                        subject:"Order Confirmation",
-                        body: mailHtml);
-        
-                    await MailService.SendAsync(mailRequest);
+                    try
+                    {
+                        var mailRequest = new MailRequest(
+                            to: [userEmail],
+                            subject: "Order Confirmation",
+                            body: mailHtml);
+
+                        await MailService.SendAsync(mailRequest);   
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Error("Failed to send confirmation email: {Message}", ex.Message);
+                    }
                 }
             }
         }
+    }
+
+    private static string GenerateQrCodeBase64(string solanaPayUrl)
+    {
+        using MemoryStream ms = new();
+        QRCodeGenerator qrCodeGenerate = new();
+        var qrCodeData = qrCodeGenerate.CreateQrCode(solanaPayUrl, QRCodeGenerator.ECCLevel.Q);
+        var qrCode = new QRCode(qrCodeData);
+        using var qrBitMap = qrCode.GetGraphic(20);
+        qrBitMap.Save(ms, ImageFormat.Png);
+
+        return $"data:image/png;base64,{Convert.ToBase64String(ms.ToArray())}";
+    }
+
+    private static string GenerateSolanaPayUrl(string recipientWallet, decimal amount, string referencePublicKey, string packageName, int orderId, string solanaToken)
+    {
+        var recipient = Uri.EscapeDataString(recipientWallet);
+        var formattedAmount = amount.ToString("0.00");
+        var encodedLabel = Uri.EscapeDataString("Soap Capital");
+        var encodedMessage = Uri.EscapeDataString(packageName);
+        var memo = Uri.EscapeDataString(orderId.ToString());
+
+        var splToken = solanaToken switch
+        {
+            "usdt" => "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",
+            "usdc" => "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+            _ => throw new ArgumentException("Unsupported token.")
+        };
+
+        return $"solana:{recipient}?amount={formattedAmount}&spl-token={splToken}&reference={referencePublicKey}&label={encodedLabel}&message={encodedMessage}&memo={memo}";
     }
 }

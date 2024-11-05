@@ -5,11 +5,11 @@
 @inject IOptions<AppSettings> AppSettings
 @inject IWalletService WalletService
 
-<AuthorizeView>
-    <NotAuthorized>
-        <MudButton OnClick="SelectWallet" Variant="Variant.Text" Style="padding:6px 6px !important;" IconClass="rounded" StartIcon="@CustomIcons.Tyrel" Color="@(IsDarkMode ? Color.Tertiary : Color.Dark)" Size="Size.Small" Class="me-3 tyrel-wallet-connect">$tyrel</MudButton>
-    </NotAuthorized>
-</AuthorizeView>
+@* <AuthorizeView> *@
+@*     <NotAuthorized> *@
+@*         <MudButton OnClick="SelectWallet" Variant="Variant.Text" Style="padding:6px 6px !important;" IconClass="rounded" StartIcon="@CustomIcons.Tyrel" Color="@(IsDarkMode ? Color.Tertiary : Color.Dark)" Size="Size.Small" Class="me-3 tyrel-wallet-connect">$tyrel</MudButton> *@
+@*     </NotAuthorized> *@
+@* </AuthorizeView> *@
 
 @if (AppSettings.Value.SocialLinks.Any())
 {

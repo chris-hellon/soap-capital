@@ -11,9 +11,9 @@ public class WalletService : IWalletService
         OnConnected?.Invoke();
     }
 
-    public async Task<byte[]?>? SignMessage(byte[] message)
+    public async Task<MessageResponse?>? SignMessage()
     {
-        if (SelectedProvider != null) return await SelectedProvider.SignMessage(message);
+        if (SelectedProvider != null) return await SelectedProvider.SignMessage();
         Console.WriteLine("No provider selected");
         return null;
     }

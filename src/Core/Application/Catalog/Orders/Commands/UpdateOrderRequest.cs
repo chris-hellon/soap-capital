@@ -8,13 +8,17 @@ public class UpdateOrderRequest : IRequest<int>
     public string? OpenNodeId { get; set; }
     public bool OrderConfirmed { get; set; }
     public string? StripeSessionId { get; set; }
+    public string? SolanaPayReferenceId { get; set; }
+    public string? SolanaPayToken { get; set; }
 
-    public UpdateOrderRequest(int orderId, string? openNodeId, bool orderConfirmed, string? stripeSessionId)
+    public UpdateOrderRequest(int orderId, string? openNodeId, bool orderConfirmed, string? stripeSessionId, string? solanaPayReferenceId = null, string? solanaPayToken = null)
     {
         Id = orderId;
         OpenNodeId = openNodeId;
         OrderConfirmed = orderConfirmed;
         StripeSessionId = stripeSessionId;
+        SolanaPayToken = solanaPayToken;
+        SolanaPayReferenceId = solanaPayReferenceId;
     }
 }
 

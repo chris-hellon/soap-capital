@@ -9,7 +9,7 @@ public static class TinyMceConfig
             { "font_formats", "Source Code Pro=sourcecodepro;"},
             { "toolbar", "undo redo | styleselect formatselect styles forecolor backcolor | bold italic underline | link | bullist numlist outdent indent | alignleft aligncenter alignright alignjustify | preview"},
             { "menubar", "edit format insert"},
-            {"plugins", "preview advlist lists"},
+            { "plugins", "preview advlist lists"},
             { "branding", false},
             { "height", $"{height.ToString()}" },
             { "block_formats", "Paragraph=p; Heading 4=h4; Heading 5=h5; Heading 6=h6"},

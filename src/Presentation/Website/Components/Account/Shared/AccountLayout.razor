@@ -2,7 +2,7 @@
 
 <MudThemeProvider Theme="CurrentTheme"/>
 
-@if (HttpContext is null)
+@if (HttpContext is null && !NavigationManager.Uri.Contains("/account/my-orders/order-status"))
 {
     <PreRenderLoader />
 }
@@ -27,7 +27,7 @@ else
     }
     protected override void OnParametersSet()
     {
-        if (HttpContext is null)
+        if (HttpContext is null && !NavigationManager.Uri.Contains("/account/my-orders/order-status"))
         {
             // If this code runs, we're currently rendering in interactive mode, so there is no HttpContext.
             // The identity pages need to set cookies, so they require an HttpContext. To achieve this we

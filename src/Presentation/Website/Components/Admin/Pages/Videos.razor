@@ -19,6 +19,7 @@
 @inject IUsersService UsersService;
 @inject INotificationsService NotificationsService;
 @inject IMailService MailService;
+@inject IJobService HangfireService;
 
 <SectionContent SectionName="PageHeaderTitle">
     <PageHeaderTitle Title="Videos"></PageHeaderTitle>
@@ -111,7 +112,7 @@
         {
             if (request is {Title: not null, Details: not null})
             {
-                var videoUrl = $"{NavigationManager.BaseUri}/login?returnUrl={(membersCategory != null ? "members" : "free-content")}/{membersCategory ?? freeContentCategory}/{videoId}/{request.Title.UrlFriendly()}";
+                var videoUrl = $"{NavigationManager.BaseUri}login?returnUrl={(membersCategory != null ? "members" : "free-content")}/{membersCategory ?? freeContentCategory}/{videoId}/{request.Title.UrlFriendly()}";
         
                 foreach (var emailSubscriber in emailSubscribedUserDtos)
                 {
@@ -130,8 +131,8 @@
                         to: [emailSubscriber.Email],
                         subject:"New Video Uploaded!",
                         body: mailHtml);
-        
-                    await MailService.SendAsync(mailRequest);
+
+                    HangfireService.Enqueue(() => MailService.SendAsync(mailRequest));
                 }
         
                 notifications = emailSubscribedUserDtos.Select(x => new NotificationDto()
@@ -149,7 +150,7 @@
         {
             if (request is {Title: not null, Details: not null})
             {
-                var videoUrl = $"{NavigationManager.BaseUri}/login?returnUrl=members/latest-review/{videoId}/{request.Title.UrlFriendly()}";
+                var videoUrl = $"{NavigationManager.BaseUri}login?returnUrl=members/latest-review/{videoId}/{request.Title.UrlFriendly()}";
         
                 foreach (var emailSubscriber in emailSubscribedUserDtos)
                 {
@@ -169,7 +170,7 @@
                         subject:"New Video Uploaded!",
                         body: mailHtml);
         
-                    await MailService.SendAsync(mailRequest);
+                    HangfireService.Enqueue(() => MailService.SendAsync(mailRequest));
                 }
         
                 notifications = emailSubscribedUserDtos.Select(x => new NotificationDto()

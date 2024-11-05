@@ -1,0 +1,417 @@
+@page "/portfolio"
+@using ApexCharts
+@using Microsoft.AspNetCore.Authorization
+@using SoapCapital.Application.Catalog.Portfolios.Dto
+@using SoapCapital.Application.Catalog.Portfolios.Queries
+@using SoapCapital.Application.CoinGecko
+@using SoapCapital.Application.CoinGecko.Dto
+@using SoapCapital.Application.CoinGecko.Queries
+@using Color = MudBlazor.Color
+
+@attribute [StreamRendering]
+@attribute [Authorize]
+
+@inject IPortfoliosService PortfoliosService
+@inject ICoinGeckoService CoinGeckoService
+
+<PageHeaderTitle Title="Portfolio"/>
+
+<MudContainer Class="pt-10 pb-10" MaxWidth="MaxWidth.Medium">
+    <MudGrid>
+        <MudItem lg="12" xs="12">
+            <div class="d-flex align-center justify-space-between">
+                <div>
+                    <MudText Typo="Typo.h4">Total Value</MudText>
+                    <MudText Typo="Typo.h2" Color="Color.Inherit">@TotalValueFormatted</MudText>
+                    <MudText Typo="Typo.h5" Color="Color.Inherit">@TotalValueInBtcFormatted</MudText>
+                </div>
+            </div>
+        </MudItem>
+
+        @if (Model != null)
+        {
+            <MudItem lg="12" xs="12">
+                <MudText Typo="Typo.h5">Asset Distribution</MudText>
+                @foreach (var asset in Model.Assets.OrderByDescending(x => x.PortfolioPercentage))
+                {
+                    <div style="height:10px; display: inline-block; transition: 0.5s; background-color:@asset.HexColor; width: @(asset.PortfolioPercentage)%"/>
+                }
+            </MudItem>
+
+            foreach (var asset in Model.Assets.OrderByDescending(x => x.PortfolioPercentage).Select((value, index) => new {value, index}))
+            {
+                <MudItem lg="@LgValues[asset.index]" xs="12">
+                    <MudPaper Class="pa-5 d-flex align-center justify-space-between" Elevation="3" Style="@GetBorderColor(asset.value)" Square="true">
+                        <div>
+                            <MudText Typo="Typo.h5" Style="@GetColor(asset.value)">@asset.value.TokenName</MudText>
+                            <MudText Typo="Typo.body1" Color="Color.Inherit">
+                                Total Value: <strong>@asset.value.CurrentValueFormatted</strong>
+                            </MudText>
+                            <MudText Typo="Typo.body1" Color="Color.Inherit">
+                                24h: <strong style="@GetDifferenceColor(asset.value)">@asset.value.ValueDifferenceFormatted</strong>
+                            </MudText>
+                            <MudText Typo="Typo.body1" Color="Color.Inherit">
+                                <strong>@Math.Round(asset.value.PortfolioPercentage, 2)%</strong> of Portfolio
+                            </MudText>
+                        </div>
+                    </MudPaper>
+                </MudItem>
+            }
+            
+            <MudItem lg="6" xs="12">
+                <MudCard Elevation="3" Class="h-100">
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.h6">% of Allocation</MudText>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        <ApexChart @ref="@_portfolioAssetPieChart"
+                                   TItem="PortfolioAssetDetailsDto"
+                                   Options="@_portfolioAssetPieChartOptions">
+
+                            <ApexPointSeries
+                                TItem="PortfolioAssetDetailsDto"
+                                Items="Model.Assets"
+                                SeriesType="@SeriesType.Pie"
+                                Name="Orders"
+                                XValue="@(e => e.TokenName)"
+                                YAggregate="@(e => e.Sum(x => x.PortfolioPercentage))"
+                            />
+                        </ApexChart>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            
+            <MudItem lg="6" xs="12">
+                <MudCard Elevation="3" Class="h-100">
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.h6">Holdings</MudText>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        <MudTable Items="@Model.Assets" Hover="true" Breakpoint="Breakpoint.Sm" LoadingProgressColor="Color.Info">
+                            <HeaderContent>
+                                <MudTh>Token</MudTh>
+                                <MudTh>Price</MudTh>
+                                <MudTh>Quantity Held</MudTh>
+                                <MudTh>Total Value</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd DataLabel="Token">@context.TokenName</MudTd>
+                                <MudTd DataLabel="Price">@context.CurrentPriceFormatted</MudTd>
+                                <MudTd DataLabel="Quantity Held">@context.QuantityHeldFormatted</MudTd>
+                                <MudTd DataLabel="Total Value">@context.CurrentValueFormatted</MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            <MudItem lg="12" xs="12">
+                <div class="d-flex mb-5 justify-space-between align-content-center">
+                    <MudText Typo="Typo.h5">Cumulative ROI</MudText>
+
+                    <div>
+                        <MudButtonGroup Size="MudBlazor.Size.Small" OverrideStyles="false">
+                            <MudButton Variant="@(CurrentChartDataType == "$" ? Variant.Filled : Variant.Outlined)" Color="Color.Primary" OnClick="@(() => ChangeChartDataType("$"))">$</MudButton>
+                            <MudButton Variant="@(CurrentChartDataType == "%" ? Variant.Filled : Variant.Outlined)" OnClick="@(() => ChangeChartDataType("%"))" Color="Color.Primary">%</MudButton>
+                        </MudButtonGroup>
+
+                        <MudButtonGroup Size="MudBlazor.Size.Small" OverrideStyles="false">
+                            <MudButton Variant="@(CurrentChartDayCount == 7 ? Variant.Filled : Variant.Outlined)" Color="Color.Primary" OnClick="@(() => FilterChartDateRange(7))">7 Days</MudButton>
+                            <MudButton Variant="@(CurrentChartDayCount == 30 ? Variant.Filled : Variant.Outlined)" OnClick="@(() => FilterChartDateRange(30))" Color="Color.Primary">30 Days</MudButton>
+                            <MudButton Variant="@(CurrentChartDayCount == 365 ? Variant.Filled : Variant.Outlined)" Color="Color.Primary" OnClick="@(() => FilterChartDateRange(365))">365 Days</MudButton>
+                        </MudButtonGroup>
+                    </div>
+                    
+
+                </div>
+
+                <ApexChart @ref="@_portfolioRoiChart"
+                           TItem="PricePoint"
+                           XAxisType="XAxisType.Datetime"
+                           Options="@_portfolioRoiChartOptions">
+
+                    @{
+                        foreach (var asset in Model.Assets)
+                        {
+                            if (asset is not {PriceData: not null, PriceSet: true})
+                            {
+                                continue;
+                            }
+
+                            if (CurrentChartDataType == "$")
+                            {
+                                <ApexPointSeries
+                                    TItem="PricePoint"
+                                    Items="asset.PriceData.FilteredPrices"
+                                    SeriesType="@SeriesType.Line"
+                                    Name="@asset.TokenName"
+                                    XValue="@(e => e.Timestamp)"
+                                    YAggregate="@(e => Math.Round(e.Sum(x => x.Price * asset.QuantityHeld), 2))"/>
+                            }
+                            else
+                            {
+                                <ApexPointSeries
+                                    TItem="PricePoint"
+                                    Items="asset.PriceData.FilteredPrices"
+                                    SeriesType="@SeriesType.Line"
+                                    Name="@asset.TokenName"
+                                    XValue="@(e => e.Timestamp)"
+                                    YAggregate="@(e => Math.Round((e.Sum(x => (x.Price * asset.QuantityHeld) - asset.InitialValue) / asset.InitialValue * 100), 2))"/>
+                            }
+                        }
+                    }
+                </ApexChart>
+            </MudItem>
+        }
+        else
+        {
+            <MudItem lg="12" xs="12">
+                <MudText Typo="Typo.h5">Asset Distribution</MudText>
+                <MudSkeleton/>
+            </MudItem>
+            <MudItem lg="12" xs="12">
+                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="250px" Width="100%"/>
+            </MudItem>
+        }
+    </MudGrid>
+</MudContainer>
+
+@code {
+    private PortfolioDetailsDto? Model { get; set; }
+    private decimal TotalValue { get; set; }
+    private string TotalValueFormatted => $"{TotalValue:n2} USD";
+    private List<int> LgValues { get; set; } = [];
+    private decimal CurrentBitcoinValue { get; set; }
+    private decimal TotalValueInBtc { get; set; }
+    private string TotalValueInBtcFormatted => $"≅ {TotalValueInBtc:n2} BTC";
+    private int CurrentChartDayCount { get; set; } = 365;
+    private string CurrentChartDataType { get; set; } = "$";
+    private readonly System.Timers.Timer _timer = new();
+    
+    private ApexChart<PricePoint>? _portfolioRoiChart;
+    private ApexChartOptions<PricePoint>? _portfolioRoiChartOptions;
+    private ApexChart<PortfolioAssetDetailsDto>? _portfolioAssetPieChart;
+    private ApexChartOptions<PortfolioAssetDetailsDto>? _portfolioAssetPieChartOptions;
+
+    protected override void OnInitialized()
+    {
+        // _timer.Interval = 60000; 
+        // _timer.Elapsed += OnTimerTick;
+        // _timer.Start();
+    }
+
+    private void OnTimerTick(object sender, System.Timers.ElapsedEventArgs e)
+    {
+        InvokeAsync(LoadPriceDataAsync);
+    }
+
+    private static string GetColor(PortfolioAssetDetailsDto asset)
+    {
+        return $"color: {asset.HexColor};";
+    }
+
+    private static string GetDifferenceColor(PortfolioAssetDetailsDto asset)
+    {
+        return !asset.PriceSet ? "" : $"color: {(asset.ValueDifferenceFormatted.Contains('-') ? "red" : "green")};";
+    }
+
+    private static string GetBorderColor(PortfolioAssetDetailsDto asset)
+    {
+        return $"border-left: 3px solid {asset.HexColor};";
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var portfolios = await PortfoliosService.GetPortfolios(new GetPortfoliosRequest());
+        var portfolioDetailsDtos = portfolios as PortfolioDetailsDto[] ?? portfolios.ToArray();
+
+        if (portfolioDetailsDtos.Any())
+        {
+            Model = await PortfoliosService.GetPortfolio(new GetPortfolioRequest(portfolioDetailsDtos.First().Id));
+            
+            if (Model != null) LgValues = CalculateLgValues(Model.Assets.Count());
+
+            var totalAssets = Model.Assets.Count();
+            var basePercentage = 100.0m / totalAssets;
+
+            Model.Assets = Model.Assets.Select(x =>
+            {
+                x.PortfolioPercentage = basePercentage;
+                return x;
+            }).ToList();
+           
+            _portfolioRoiChartOptions = new ApexChartOptions<PricePoint>
+            {
+                Theme = new Theme {Mode = ChartsThemeService.IsDarkMode ? Mode.Dark : Mode.Light, Palette = PaletteType.Palette1},
+                Colors = Model.Assets.Select(x => x.HexColor).ToList(),
+                Stroke = new Stroke { Width = 3,  Colors = Model.Assets.Select(x => x.HexColor).ToList() },
+                Yaxis =
+                [
+                    new YAxis
+                    {
+                        Labels = new YAxisLabels
+                        {
+                            Formatter = CurrentChartDataType == "$" ? "function (value) { return '$' + Number(value).toLocaleString();}" : "function (value) { return Number(value).toLocaleString() + '%';}"
+                        }
+                    }
+                ]
+            };
+            
+            _portfolioAssetPieChartOptions = new ApexChartOptions<PortfolioAssetDetailsDto>
+            {
+                Theme = new Theme {Mode = ChartsThemeService.IsDarkMode ? Mode.Dark : Mode.Light, Palette = PaletteType.Palette1},
+                Colors = Model.Assets.Select(x => x.HexColor).ToList(),
+                Stroke = new Stroke { Width = 3,  Colors = Model.Assets.Select(x => x.HexColor).ToList() },
+                Yaxis =
+                [
+                    new YAxis
+                    {
+                        Labels = new YAxisLabels
+                        {
+                            Formatter = @"function (value) { return Number(value).toFixed(2).toLocaleString() + '%'; }"
+                        }
+                    }
+                ]
+            };
+            
+            await InvokeAsync(StateHasChanged);
+
+            _ = LoadPriceDataAsync();
+        }
+    }
+
+    private async Task LoadPriceDataAsync()
+    {
+        var tasks = Model?.Assets.Select(async asset =>
+        {
+            asset.PriceData = await CoinGeckoService.GetCoinMarketChart(new GetCoinMarketChartRequest(asset.TokenShortName));
+            asset.PriceSet = true;
+            
+            if (asset.PriceData.LivePrice != null)
+                asset.PriceData.Prices.Add(new PricePoint()
+                {
+                    Timestamp = DateTime.Now,
+                    Price = asset.PriceData.LivePrice.Value
+                });
+
+            await InvokeAsync(StateHasChanged);
+        }).ToArray();
+
+        if (tasks != null) await Task.WhenAll(tasks);
+
+        // Calculate TotalValue and PortfolioPercentage
+        if (Model != null && Model.Assets.All(x => x.PriceSet))
+        {
+            TotalValue = Model.Assets.Sum(x => x.CurrentValue);
+
+            if (Model.Assets.Any(x => x.TokenShortName == "bitcoin"))
+            {
+                CurrentBitcoinValue = Model.Assets.First(x => x.TokenShortName == "bitcoin").CurrentPrice;
+            }
+            else
+            {
+                var bitcoinCurrentPrice = await CoinGeckoService.GetCoinMarketChart(new GetCoinMarketChartRequest("bitcoin"));
+                if (bitcoinCurrentPrice.LivePrice != null) CurrentBitcoinValue = bitcoinCurrentPrice.LivePrice.Value;
+            }
+
+            TotalValueInBtc = TotalValue / CurrentBitcoinValue;
+
+            // Calculate PortfolioPercentage for each asset
+            foreach (var asset in Model.Assets)
+            {
+                asset.PortfolioPercentage = TotalValue > 0 ? (asset.CurrentValue / TotalValue) * 100 : 0;
+            }
+
+            // Notify UI to update
+            await InvokeAsync(StateHasChanged);
+            await _portfolioRoiChart?.RenderAsync();
+            await _portfolioAssetPieChart?.RenderAsync();
+        }
+    }
+
+    private static List<int> CalculateLgValues(int itemCount)
+    {
+        const int maxLg = 12;
+        const int minLg = 4;
+        var lgValues = new List<int>();
+
+        if (itemCount <= 0) return lgValues;
+
+        var itemsPerRow = Math.Min(maxLg / minLg, itemCount);
+        var fullRows = itemCount / itemsPerRow;
+        var remainingItems = itemCount % itemsPerRow;
+
+        for (var i = 0; i < fullRows; i++)
+        {
+            var baseLg = maxLg / itemsPerRow;
+            var remainder = maxLg % itemsPerRow;
+
+            for (var j = 0; j < itemsPerRow; j++)
+            {
+                lgValues.Add(baseLg + (j < remainder ? 1 : 0));
+            }
+        }
+
+        if (remainingItems <= 0) return lgValues;
+        {
+            var baseLg = maxLg / remainingItems;
+            var remainder = maxLg % remainingItems;
+
+            for (var j = 0; j < remainingItems; j++)
+            {
+                lgValues.Add(baseLg + (j < remainder ? 1 : 0));
+            }
+        }
+
+        return lgValues;
+    }
+
+    private async Task FilterChartDateRange(int dayCount = 365)
+    {
+        CurrentChartDayCount = dayCount;
+        
+        if (Model == null) return;
+        
+        var cutoffDate = DateTime.UtcNow.AddDays(-(dayCount + 1));
+
+        Model.Assets = Model.Assets.Select(asset =>
+        {
+            if (asset.PriceData != null)
+                asset.PriceData.FilteredPrices = asset.PriceData.Prices
+                    .Where(pricePoint => pricePoint.Timestamp >= cutoffDate)
+                    .ToList();
+            
+            return asset;
+        }).ToList();
+        
+        await _portfolioRoiChart?.RenderAsync();
+    }
+    
+    private async Task ChangeChartDataType(string dataType)
+    {
+        CurrentChartDataType = dataType;
+        
+        _portfolioRoiChartOptions = new ApexChartOptions<PricePoint>
+        {
+            Theme = new Theme {Mode = ChartsThemeService.IsDarkMode ? Mode.Dark : Mode.Light, Palette = PaletteType.Palette1},
+            Colors = Model.Assets.Select(x => x.HexColor).ToList(),
+            Stroke = new Stroke { Width = 3,  Colors = Model.Assets.Select(x => x.HexColor).ToList() },
+            Yaxis =
+            [
+                new YAxis
+                {
+                    Labels = new YAxisLabels
+                    {
+                        Formatter = CurrentChartDataType == "$" ? "function (value) { return '$' + Number(value).toLocaleString();}" : "function (value) { return Number(value).toLocaleString() + '%';}"
+                    }
+                }
+            ]
+        };
+        
+        await _portfolioRoiChart?.RenderAsync();
+    }
+}

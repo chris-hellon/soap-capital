@@ -25,6 +25,12 @@
         <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.0"/>
         <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.0"/>
         <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.0"/>
+        <PackageReference Include="MudBlazor" Version="6.21.0" />
+        <PackageReference Include="NBitcoin" Version="7.0.39" />
+        <PackageReference Include="QRCoderNetCore" Version="1.0.0" />
+        <PackageReference Include="Solnet.Programs" Version="6.1.0" />
+        <PackageReference Include="Solnet.Rpc" Version="6.1.0" />
+        <PackageReference Include="Solnet.Wallet" Version="6.1.0" />
         <PackageReference Include="TinyMCE.Blazor" Version="1.0.4" />
     </ItemGroup>
 

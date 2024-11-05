@@ -36,7 +36,7 @@ public interface IWalletProvider
         /// </summary>
         /// <param name="message">The message to sign.</param>
         /// <returns>The signature of the message</returns>
-        public Task<byte[]?> SignMessage(byte[] message);
+        public Task<MessageResponse?> SignMessage();
 
         /// <summary>
         /// 

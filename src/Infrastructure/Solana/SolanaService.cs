@@ -18,6 +18,11 @@ public class SolanaService : ISolanaService
     {
         return _mediator.Send(request);
     }
+
+    public Task<bool> GetSolanaPayStatus(GetSolanaPayStatusRequest request)
+    {
+        return _mediator.Send(request);
+    }
     
     public string? AuthKey { get; set; }    
     

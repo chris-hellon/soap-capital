@@ -1,0 +1,124 @@
+@page "/admin/portfolios"
+@using Mapster
+@using SoapCapital.Application.Catalog.Portfolios.Commands
+@using SoapCapital.Application.Catalog.Portfolios.Dto
+@using SoapCapital.Application.Catalog.Portfolios.Queries
+
+@attribute [StreamRendering]
+
+@inject IPortfoliosService PortfoliosService
+
+<SectionContent SectionName="PageHeaderTitle">
+    <PageHeaderTitle Title="Portfolios"></PageHeaderTitle>
+</SectionContent>
+
+<EntityEditTable @ref="@EntityEditTable" TId="int" TEntity="PortfolioDetailsDto" TRequest="UpdatePortfolioRequest"
+                 EntityList="TableEntities" Fields="TableFields" SearchFunc="SearchPortfolios" Loading="Loading"
+                 EntityName="Portfolio"
+                 IdFunc="portfolio => portfolio.Id"
+                 GetDetailsFunc="GetPortfolio"
+                 CreateFunc="async portfolio => await PortfoliosService.CreatePortfolio(portfolio.Adapt<CreatePortfolioRequest>())"
+                 UpdateFunc="async portfolio => await PortfoliosService.UpdatePortfolio(portfolio.Adapt<UpdatePortfolioRequest>())"
+                 DeleteFunc="async id => await PortfoliosService.DeletePortfolio(id)"
+                 LoadDataFunc="async () => await PortfoliosService.GetPortfolios(new GetPortfoliosRequest())">
+    <EditFormContent>
+        <MudGrid>
+            <MudItem lg="12" xs="12">
+                <MudTextField For="@(() => context.Title)" @bind-Value="context.Title" Label="Title" Variant="Variant.Outlined"/>
+            </MudItem>
+
+            <MudItem lg="12" xs="12" Class="mb-3">
+                <MudPaper Outlined="true">
+                    <MudList T="string">
+                        <MudListItem Text="Assets" />
+                        <MudDivider></MudDivider>
+                        @foreach (var asset in context.Assets)
+                        {
+                            <MudListItem>
+                                <ChildContent>
+                                    <MudGrid>
+                                        <MudItem lg="3" xs="12">
+                                            <MudTextField For="@(() => asset.TokenName)" @bind-Value="asset.TokenName" Label="Token Name" Placeholder="eg. BTC" Variant="Variant.Filled" Margin="Margin.Dense"/>
+                                        </MudItem>
+                                        <MudItem lg="3" xs="12">
+                                            <MudTextField For="@(() => asset.TokenShortName)" @bind-Value="asset.TokenShortName" Label="Coin Gecko ApiId" Placeholder="eg. bitcoin" Variant="Variant.Filled" Margin="Margin.Dense"/>
+                                        </MudItem>
+                                        <MudItem lg="3" xs="12">
+                                            <MudColorPicker @bind-Text="@asset.HexColor" Label="Token Colour" Style="@($"color: {asset.HexColor};")" Placeholder="Select Colour" Variant="Variant.Filled" Margin="Margin.Dense"/>
+                                        </MudItem>
+                                        <MudItem lg="2" xs="12">
+                                            <MudNumericField T="decimal?" For="@(() => asset.QuantityHeld)" @bind-Value="asset.QuantityHeld" Label="Quantity" Min="0" Variant="Variant.Filled" Margin="Margin.Dense"/>
+                                        </MudItem>
+                                        <MudItem lg="1" xs="12">
+                                            <MudIconButton Icon="@Icons.Material.Filled.Delete" OnClick="@(() => DeleteAsset(context, asset))"></MudIconButton>
+                                        </MudItem>
+                                    </MudGrid>
+                                </ChildContent>
+                            </MudListItem>
+                        }
+
+                        <MudDivider></MudDivider>
+                        
+                        <MudListItem>
+                            <ChildContent>
+                                <MudButton OnClick="@(() => AddTask(context))" StartIcon="@Icons.Material.Filled.Add" FullWidth="true" Class="rounded-lg py-2">Add Asset</MudButton>
+                            </ChildContent>
+                        </MudListItem>
+                    </MudList>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+    </EditFormContent>
+</EntityEditTable>
+
+@code {
+    private EntityEditTable<PortfolioDetailsDto, UpdatePortfolioRequest, int>? EntityEditTable { get; set; }
+
+    protected bool Loading = true;
+
+    public IEnumerable<PortfolioDetailsDto> TableEntities { get; set; } = Enumerable.Empty<PortfolioDetailsDto>();
+
+    public List<EntityField<PortfolioDetailsDto>> TableFields =>
+    [
+        new EntityField<PortfolioDetailsDto>(package => package.Title, "Title"),
+        new EntityField<PortfolioDetailsDto>(package => package.CreateDate.ToShortDateString(), "Create Date"),
+        new EntityField<PortfolioDetailsDto>(package => package.Active, "Active")
+    ];
+    
+    private async Task<UpdatePortfolioRequest> GetPortfolio(int id)
+    {
+        var portfolio = await PortfoliosService.GetPortfolio(new GetPortfolioRequest(id, false));
+
+        return portfolio.Adapt<UpdatePortfolioRequest>();
+    }
+    
+    public static bool SearchPortfolios(string? searchString, PortfolioDetailsDto portfolio)
+    {
+        if (string.IsNullOrWhiteSpace(searchString))
+            return true;
+
+        return portfolio.Title.Contains(searchString,
+            StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void AddTask(UpdatePortfolioRequest request)
+    {
+        if (request.Assets.Any(x => string.IsNullOrEmpty(x.TokenName))) return;
+        
+        request.Assets.Add(new UpdatePortfolioAssetRequest());
+        EntityEditTable.AddEditModal.ForceRender();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        TableEntities = await PortfoliosService.GetPortfolios(new GetPortfoliosRequest());
+
+        Loading = false;
+    }
+
+    private void DeleteAsset(UpdatePortfolioRequest request, UpdatePortfolioAssetRequest asset)
+    {
+        request.Assets.Remove(asset);
+        EntityEditTable.AddEditModal.ForceRender();
+    }
+}

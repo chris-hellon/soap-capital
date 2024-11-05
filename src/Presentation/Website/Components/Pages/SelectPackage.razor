@@ -35,7 +35,7 @@
                             <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="async () => await GetPackagePaymentMethods(package)">@($"Get {package.Title}")</MudButton>
                         </MudCardActions>
                         <MudCardContent>
-                            <MudList Class="mx-auto">
+                            <MudList Class="mx-auto" T="string">
                                 @{
                                     <MudListItem>
                                         What's Included?

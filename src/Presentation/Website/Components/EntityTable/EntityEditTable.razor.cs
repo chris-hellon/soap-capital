@@ -21,6 +21,8 @@ public partial class EntityEditTable<TEntity, TRequest, TId> where TRequest : ne
     
     [Parameter] public Func<string?, TEntity, bool>? SearchFunc { get; set; }
     
+    [Parameter] public Func<TId, Task<TRequest>>? GetDetailsFunc { get; set; }
+    
     [Parameter] public Func<TRequest, Task>? CreateFunc { get; set;  }
     
     [Parameter] public Func<TRequest, Task>? UpdateFunc { get; set;  }
@@ -91,6 +93,16 @@ public partial class EntityEditTable<TEntity, TRequest, TId> where TRequest : ne
             }
 
             RequestModel = entity.Adapt<TRequest>();
+            
+            RequestModel =
+                GetDetailsFunc is not null
+                && await ServiceHelper.ExecuteCallGuardedAsync(
+                        () => GetDetailsFunc(id!),
+                        Snackbar,
+                        Logger)
+                    is { } detailsResult
+                    ? detailsResult
+                    : entity!.Adapt<TRequest>();
         }
         
         parameters.Add(nameof(AddEditModal<TRequest>.RequestModel), RequestModel);

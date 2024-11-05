@@ -12,12 +12,18 @@
             @{
                 var userIsAuthenticated = CurrentUser.IsAuthenticated();
                 
-                @if (!string.IsNullOrEmpty(Package?.StripePriceId))
+                if (!string.IsNullOrEmpty(Package?.WhopCheckoutUrl))
                 {
                     <MudButton DisableElevation Variant="Variant.Filled" Class="me-5" Color="Color.Primary" Href="@($"/{(!userIsAuthenticated ? "sign-up" : $"account/subscription/{(IsUpgrade ? "upgrade" : "renew")}")}/{Package.Title.UrlFriendly()}/credit-card")" StartIcon="@Icons.Material.Filled.CreditCard">Credit Card</MudButton>
                 }
-
-                <MudButton DisableElevation Variant="Variant.Filled" Color="Color.Primary" Href="@($"/{(!userIsAuthenticated ? "sign-up" : $"account/subscription/{(IsUpgrade ? "upgrade" : "renew")}")}/{Package?.Title.UrlFriendly()}/bitcoin")" StartIcon="@CustomIcons.Bitcoin">Bitcoin</MudButton>
+                
+                <MudButton DisableElevation Variant="Variant.Filled" Class="me-5" Color="Color.Primary" Href="@($"/{(!userIsAuthenticated ? "sign-up" : $"account/subscription/{(IsUpgrade ? "upgrade" : "renew")}")}/{Package?.Title.UrlFriendly()}/bitcoin")" StartIcon="@CustomIcons.Bitcoin">Bitcoin</MudButton>
+                
+                if (!string.IsNullOrEmpty(Package?.SolanaPublicWalletKey))
+                {
+                    <MudButton DisableElevation Variant="Variant.Filled" Class="me-5" Color="Color.Primary" Href="@($"/{(!userIsAuthenticated ? "sign-up" : $"account/subscription/{(IsUpgrade ? "upgrade" : "renew")}")}/{Package.Title.UrlFriendly()}/usdt")" StartIcon="@CustomIcons.Usdt">USDT</MudButton>
+                    <MudButton DisableElevation Variant="Variant.Filled" Color="Color.Primary" Href="@($"/{(!userIsAuthenticated ? "sign-up" : $"account/subscription/{(IsUpgrade ? "upgrade" : "renew")}")}/{Package.Title.UrlFriendly()}/usdc")" StartIcon="@CustomIcons.Usdc">USDC</MudButton>
+                }
             }
         </div>
     </DialogContent>

@@ -56,7 +56,7 @@
                     }
                     else
                     {
-                        <MudLink Href="/account/subscription" Color="Color.Tertiary" Underline="Underline.None" Typo="Typo.h6">
+                        <MudLink Href="/account/subscription" Class="identity-buttons" Color="Color.Tertiary" Underline="Underline.None" Typo="Typo.h6">
                             Subscription
                         </MudLink>
                     }
@@ -86,7 +86,17 @@
                         _ => string.Empty
                     };
 
-                    <MudIconButton Color="@(IsDarkMode ? Color.Tertiary : Color.Dark)" Href="@socialLink.Url" Target="_blank" Icon="@startIcon" Size="Size.Small" Class="@($"{(socialLink != AppSettings.Value.SocialLinks.Last() ? "me-3" : "")}{(socialLink.IconClass == "fa-substack" ? "substack-icon" : "")}")"/>
+                    if (socialLink.IconClass == "fa-discord")
+                    {
+                        if (UserSubscription != null && UserSubscription.PackageId != 5 && UserSubscription.PackageId != 6)
+                        {
+                            <MudIconButton Color="@(IsDarkMode ? Color.Tertiary : Color.Dark)" Href="@socialLink.Url" Target="_blank" Icon="@startIcon" Size="Size.Small" Class="@($"{(socialLink != AppSettings.Value.SocialLinks.Last() ? "me-3" : "")}{(socialLink.IconClass == "fa-substack" ? "substack-icon" : "")}")"/>
+                        }
+                    }
+                    else
+                    {
+                        <MudIconButton Color="@(IsDarkMode ? Color.Tertiary : Color.Dark)" Href="@socialLink.Url" Target="_blank" Icon="@startIcon" Size="Size.Small" Class="@($"{(socialLink != AppSettings.Value.SocialLinks.Last() ? "me-3" : "")}{(socialLink.IconClass == "fa-substack" ? "substack-icon" : "")}")"/>
+                    }
                 }
             }
 
@@ -95,8 +105,8 @@
 
                 </Authorized>
                 <NotAuthorized>
-                    <MudButton Href="/login" Class="me-5 ms-5" Variant="Variant.Filled" Color="Color.Secondary">Log In</MudButton>
-                    <MudButton Href="/choose-membership" Variant="Variant.Filled" Color="Color.Primary">Sign Up</MudButton>
+                    <MudButton Href="/login" Class="me-5 ms-5 identity-buttons" Variant="Variant.Filled" Color="Color.Secondary">Log In</MudButton>
+                    <MudButton Href="/choose-membership" Class="identity-buttons" Variant="Variant.Filled" Color="Color.Primary">Sign Up</MudButton>
                 </NotAuthorized>
             </AuthorizeView>
         }

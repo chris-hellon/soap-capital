@@ -25,6 +25,7 @@ internal static class Startup
                 .AddJsonFile($"{configurationsDirectory}/opennode.json", optional: false, reloadOnChange: true)
                 .AddJsonFile($"{configurationsDirectory}/solana.json", optional: false, reloadOnChange: true)
                 .AddJsonFile($"{configurationsDirectory}/appconfiguration.json", optional: false, reloadOnChange: true)
+                .AddJsonFile($"{configurationsDirectory}/hangfire.json", optional: false, reloadOnChange: true)
                 .AddEnvironmentVariables();
         });
 #pragma warning restore ASP0013

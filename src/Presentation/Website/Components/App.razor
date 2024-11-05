@@ -29,14 +29,7 @@
     <link href="_content/MudBlazor/MudBlazor.min.css" rel="stylesheet"/>
     <link href="_content/CodeBeam.MudBlazor.Extensions/MudExtensions.min.css" rel="stylesheet"/>
 
-    @if (HostEnvironment.IsDevelopment())
-    {
-        <link rel="stylesheet" href="css/soapcapital.min.css"/>
-    }
-    else
-    {
-        <link rel="stylesheet" href="https://paperstreetsoap.azureedge.net/site/soapcapital.min.css?v=1.1"/>
-    }
+   <link rel="stylesheet" href="css/soapcapital.min.css"/>
     
     <link rel="stylesheet" href="css/tinymce.min.css"/>
 
@@ -50,6 +43,13 @@
     
             gtag('config', 'G-1T5H09ZF8X');</script>
 
+<script>
+    
+ function reloadPage() {
+     alert("hello");
+        window.location.reload();
+    }
+</script>
     <HeadOutlet @rendermode="RenderModeForPage"/>
 </head>
 
@@ -67,14 +67,15 @@
 @if (HostEnvironment.IsDevelopment())
 {
     <script src="js/soapcapital.min.js"></script>
-    <script src="js/jsinterop.min.js"></script>
+    <script src="js/solanawallet.js?v=1.1"></script>
 }
 else
 {
     <script src="https://paperstreetsoap.azureedge.net/site/soapcapital.min.js"></script>
-    <script src="https://paperstreetsoap.azureedge.net/site/jsinterop.min.js"></script>
+    <script src="js/solanawallet.js?v=1.1"></script>
+    
+    @* <script src="https://paperstreetsoap.azureedge.net/site/jsinterop.min.js"></script> *@
 }
-
 
 
 </body>
@@ -90,7 +91,7 @@ else
                                                                                     || HttpContextAccessor.HttpContext.Request.Path.StartsWithSegments("/open-node-webhook")
                                                                                     || HttpContextAccessor.HttpContext.Request.Path.StartsWithSegments("/login-with-2fa")
                                                                                     || HttpContextAccessor.HttpContext.Request.Path.StartsWithSegments("/sign-up")
-                                                                                    || HttpContextAccessor.HttpContext.Request.Path.StartsWithSegments("/account")
+                                                                                    || (HttpContextAccessor.HttpContext.Request.Path.StartsWithSegments("/account") && !HttpContextAccessor.HttpContext.Request.Path.StartsWithSegments("/account/my-orders/order-status"))
                                                                                     || HttpContextAccessor.HttpContext.Request.Path.StartsWithSegments("/sitemap"));
 
     private IComponentRenderMode? RenderModeForPage => IsServerPage ? null : InteractiveServer;

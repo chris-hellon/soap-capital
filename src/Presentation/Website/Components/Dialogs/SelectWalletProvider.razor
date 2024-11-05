@@ -10,6 +10,7 @@
 @using SoapCapital.Application.Solana.Queries
 @using Microsoft.Extensions.Options
 @using SoapCapital.Application.Solana.Configuration
+@using Solnet.Wallet
 
 @implements IDisposable
 
@@ -47,7 +48,7 @@
 
     private bool Connecting { get; set; }
     private IWalletProvider? WalletProvider { get; set; }
-
+    
     protected override void OnInitialized()
     {
         AppState.OnChange += StateHasChanged;
@@ -65,11 +66,11 @@
 
     private async void SelectAdapter(string adapterName)
     {
-        //Connecting = true;
+        Connecting = true;
         if (Adapters != null) WalletProvider = Adapters.FirstOrDefault(adapter => adapter.Name == adapterName);
         if (WalletProvider == null)
         {
-            //Connecting = false;
+            Connecting = false;
             return;
         }
 
@@ -78,30 +79,55 @@
         await WalletProvider.Connect();
     }
 
-    private void OnConnected()
+    private async void OnConnected()
     {
-        Snackbar.Add($"Connected to provider. Account: {WalletProvider?.PublicKey}", Severity.Success);
-        if (WalletProvider != null)
-        {
-            WalletService.SetProvider(WalletProvider);
-
-            try
+        try {
+            if (WalletProvider != null)
             {
-                var hasTyrelBalanceRequest = Task.Run(() => ServiceHelper.ExecuteCallGuardedAsync(() => SolanaService.GetTyrelBalance(new GetTyrelBalanceRequest(WalletProvider.PublicKey)), Snackbar, Logger));
+                WalletService.SetProvider(WalletProvider);
 
-                if (hasTyrelBalanceRequest.Result is {Success: true})
-                {
-                    // var authKey = Guid.NewGuid();
-                    // WalletService.SetAuthKey(authKey);
-                    NavigationManager.NavigateTo($"/tyrel-login/{WalletProvider.PublicKey}/{SolanaSettings.Value.AuthKey}");
-                }
+                var signMessageResponse = await WalletService.SignMessage()!;
                 
-                Snackbar.Add($"Unable to fetch Tyrel balance. Please refresh the page and try again", Severity.Error);
+                if (signMessageResponse != null)
+                {                
+                    var publicKey = new PublicKey(WalletProvider?.PublicKey?.Key);
+                    
+                    var verified = publicKey.Verify(signMessageResponse.Message, signMessageResponse.Signature);
+
+                    if (verified)
+                    {
+                        Snackbar.Add($"Connected to provider. Account: {WalletProvider?.PublicKey}", Severity.Success);
+                
+                        try
+                        {
+                            var hasTyrelBalanceRequest = Task.Run(() => ServiceHelper.ExecuteCallGuardedAsync(() => SolanaService.GetTyrelBalance(new GetTyrelBalanceRequest(WalletProvider.PublicKey)), Snackbar, Logger));
+
+                            if (hasTyrelBalanceRequest.Result is {Success: true})
+                            {
+                                NavigationManager.NavigateTo($"/tyrel-login/{WalletProvider?.PublicKey}/{SolanaSettings.Value.AuthKey}");
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            // ignored
+                            Logger.Error(ex.Message);
+                        }
+                    }
+                    else
+                    {
+                        Logger.Information("Message not verified with user");
+                    }
+                }
+                else
+                {
+                    Logger.Information("No sign message response recieved");
+                }
             }
-            catch (Exception)
-            {
-                // ignored
-            }
+        }
+        catch(Exception ex)
+        {
+            //Snackbar.Add(ex.Message, Severity.Error);
+            Logger.Error(ex.Message);
         }
 
         Cancel();

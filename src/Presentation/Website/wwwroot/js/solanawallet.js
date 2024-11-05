@@ -1,5 +1,5 @@
 /*! For license information please see jsinterop.js.LICENSE.txt */
-var jsinterop;
+var solanawallet;
 (() => {
     var t = {
             1506: (t) => {
@@ -15840,14 +15840,17 @@ var jsinterop;
                     }
                 });
             }
-            signMessage(t) {
+            signMessage() {
                 return ze(this, void 0, void 0, function* () {
                     try {
                         const e = this._wallet;
                         if (!e) throw new p();
                         try {
-                            const { signature: r } = yield e.signMessage(t);
-                            return Uint8Array.from(r);
+                            const message = "Please verify your wallet to access Soap Capital.";
+                            const encodedMessage = new TextEncoder().encode(message);
+                            const { signature: r } = yield e.signMessage(encodedMessage);
+                            
+                            return new MessageResponse(encodedMessage, Uint8Array.from(r));
                         } catch (t) {
                             throw new m(null == t ? void 0 : t.message, t);
                         }
@@ -15887,6 +15890,12 @@ var jsinterop;
                 f((n = n.apply(t, e || [])).next());
             });
         };
+        class MessageResponse {
+            constructor(message, signature) {
+                this.Message = message;
+                this.Signature = signature;
+            }
+        }
         class qe extends i() {
             constructor(t, e) {
                 if (
@@ -16182,7 +16191,7 @@ var jsinterop;
                     }
                 });
             }
-            signMessage(t) {
+            signMessage() {
                 return Ce(this, void 0, void 0, function* () {
                     try {
                         const e = this._wallet;
@@ -16362,14 +16371,13 @@ var jsinterop;
             }
             signTransaction(t) {
                 return Fe(this, void 0, void 0, function* () {
-                    var e = Mt.from(Uint8Array.from(atob(t), (t) => t.charCodeAt(0))),
-                        r = Et.populate(e, [this.adapter.publicKey.toString()]);
+                    var r = Et.populate(t, [this.adapter.publicKey.toString()]);
                     return r.compileMessage(), Ve(yield (yield this.adapter.signTransaction(r)).serialize());
                 });
             }
-            signMessage(t) {
+            signMessage() {
                 return Fe(this, void 0, void 0, function* () {
-                    if (this.hasSignMessage) return Ve(yield this.adapter.signMessage(Uint8Array.from(atob(t), (t) => t.charCodeAt(0))));
+                    if (this.hasSignMessage) return yield this.adapter.signMessage();
                 });
             }
             ConnectedHandler() {
@@ -16386,5 +16394,5 @@ var jsinterop;
             }
         }
     })(),
-        (jsinterop = n);
+        (solanawallet = n);
 })();
